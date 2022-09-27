@@ -24,6 +24,7 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.Ordered;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -37,6 +38,7 @@ import org.springframework.web.client.RestTemplate;
 import java.time.Duration;
 
 import javax.sql.DataSource;
+import java.net.HttpURLConnection;
 
 @SpringBootApplication
 @EnableScheduling
@@ -58,6 +60,17 @@ public class RegistryApplication {
                 new ByteArrayHttpMessageConverter(),
                 new StringHttpMessageConverter(),
                 new MappingJackson2HttpMessageConverter())
+            .build();
+    }
+
+    @Bean
+    public RestTemplate nonRedirectingRestTemplate(RestTemplateBuilder builder) {
+        return builder
+            .requestFactory(() -> new SimpleClientHttpRequestFactory() {
+                @Override
+                protected void prepareConnection(HttpURLConnection connection, String httpMethod ) {
+                    connection.setInstanceFollowRedirects(false);
+                }})
             .build();
     }
     

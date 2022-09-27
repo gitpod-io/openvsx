@@ -16,6 +16,7 @@ import static org.mockito.ArgumentMatchers.eq;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Map;
 
 import javax.persistence.EntityManager;
 
@@ -52,9 +53,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.util.Streamable;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.RequestEntity;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.HttpClientErrorException;
@@ -88,7 +87,8 @@ public class EclipseServiceTest {
 
     @Test
     public void testGetPublicProfile() throws Exception {
-        Mockito.when(restTemplate.exchange(any(RequestEntity.class), eq(String.class)))
+        var urlTemplate = "https://test.openvsx.eclipse.org/account/profile/{personId}";
+        Mockito.when(restTemplate.exchange(eq(urlTemplate), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class), eq(Map.of("personId", "test"))))
             .thenReturn(mockProfileResponse());
 
         var profile = eclipse.getPublicProfile("test");
@@ -123,11 +123,11 @@ public class EclipseServiceTest {
         user.setEclipseData(eclipseData);
         eclipseData.personId = "test";
 
-        Mockito.when(restTemplate.exchange(any(RequestEntity.class), eq(String.class)))
-            .thenReturn(mockAgreementResponse());
+        var urlTemplate = "https://test.openvsx.eclipse.org/openvsx/publisher_agreement/{personId}";
+        Mockito.when(restTemplate.exchange(eq(urlTemplate), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class), eq(Map.of("personId", "test"))))
+                .thenReturn(mockAgreementResponse());
 
         var agreement = eclipse.getPublisherAgreement(user);
-
         assertThat(agreement).isNotNull();
         assertThat(agreement.isActive).isTrue();
         assertThat(agreement.documentId).isEqualTo("abcd");
@@ -143,11 +143,11 @@ public class EclipseServiceTest {
         user.setEclipseData(eclipseData);
         eclipseData.personId = "test";
 
-        Mockito.when(restTemplate.exchange(any(RequestEntity.class), eq(String.class)))
+        var urlTemplate = "https://test.openvsx.eclipse.org/openvsx/publisher_agreement/{personId}";
+        Mockito.when(restTemplate.exchange(eq(urlTemplate), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class), eq(Map.of("personId", "test"))))
             .thenThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND));
 
         var agreement = eclipse.getPublisherAgreement(user);
-
         assertThat(agreement).isNull();
     }
 

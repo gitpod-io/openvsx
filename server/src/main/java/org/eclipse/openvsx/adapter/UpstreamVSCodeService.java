@@ -11,7 +11,6 @@ package org.eclipse.openvsx.adapter;
 
 import com.google.common.base.Strings;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.eclipse.openvsx.util.NotFoundException;
 import org.eclipse.openvsx.util.UrlUtil;
 import org.slf4j.Logger;
@@ -22,13 +21,14 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.HttpURLConnection;
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 public class UpstreamVSCodeService implements IVSCodeService {
@@ -37,6 +37,9 @@ public class UpstreamVSCodeService implements IVSCodeService {
 
     @Autowired
     RestTemplate restTemplate;
+
+    @Autowired
+    RestTemplate nonRedirectingRestTemplate;
 
     @Value("${ovsx.upstream.url:}")
     String upstreamUrl;
@@ -70,14 +73,26 @@ public class UpstreamVSCodeService implements IVSCodeService {
 
     @Override
     public ResponseEntity<byte[]> browse(String namespaceName, String extensionName, String version, String path) {
-        var segments = ArrayUtils.addAll(new String[]{ "vscode", "unpkg", namespaceName, extensionName, version }, path.split("/"));
-        var apiUrl = UrlUtil.createApiUrl(upstreamUrl, segments);
-        var request = new RequestEntity<Void>(HttpMethod.GET, URI.create(apiUrl));
+        var urlTemplate = upstreamUrl + "/vscode/unpkg/{namespace}/{extension}/{version}";
+        var uriVariables = new HashMap<String, String>(Map.of(
+            "namespace", namespaceName,
+            "extension", extensionName,
+            "version", version
+        ));
+        var segIndex = 0;
+        for (String segment : path.split("/")) {
+            var varName = "seg" + segIndex;
+            urlTemplate = urlTemplate + "/{" + varName + "}";
+            uriVariables.put(varName, segment);
+            segIndex++;
+        }
+
         ResponseEntity<byte[]> response;
         try {
-            response = restTemplate.exchange(request, byte[].class);
+            response = restTemplate.exchange(urlTemplate, HttpMethod.GET, null, byte[].class, uriVariables);
         } catch(RestClientException exc) {
-            logger.error("GET " + apiUrl, exc);
+            var url = UriComponentsBuilder.fromUriString(urlTemplate).build(uriVariables);
+            logger.error("GET " + url, exc);
             throw new NotFoundException();
         }
 
@@ -86,7 +101,8 @@ public class UpstreamVSCodeService implements IVSCodeService {
             return response;
         }
         if(statusCode.isError() && statusCode != HttpStatus.NOT_FOUND) {
-            logger.error("GET {}: {}", apiUrl, response);
+            var url = UriComponentsBuilder.fromUriString(urlTemplate).build(uriVariables);
+            logger.error("GET {}: {}", url, response);
         }
 
         throw new NotFoundException();
@@ -94,14 +110,20 @@ public class UpstreamVSCodeService implements IVSCodeService {
 
     @Override
     public String download(String namespace, String extension, String version, String targetPlatform) {
-        var segments = new String[]{ "vscode", "gallery", "publishers", namespace, "vsextensions", extension, version, "vspackage" };
-        var apiUrl = UrlUtil.createApiUrl(upstreamUrl, segments);
-        var request = new RequestEntity<Void>(HttpMethod.GET, URI.create(apiUrl));
+        // TODO add targetPlatform as query parameter once upstream supports it
+        var urlTemplate = upstreamUrl + "/vscode/gallery/publishers/{namespace}/vsextensions/{extension}/{version}/vspackage";
+        var uriVariables = Map.of(
+                "namespace", namespace,
+                "extension", extension,
+                "version", version
+        );
+
         ResponseEntity<Void> response;
         try {
-            response = nonRedirectingRestTemplate().exchange(request, Void.class);
+            response = nonRedirectingRestTemplate.exchange(urlTemplate, HttpMethod.GET, null, Void.class, uriVariables);
         } catch(RestClientException exc) {
-            logger.error("GET " + apiUrl, exc);
+            var url = UriComponentsBuilder.fromUriString(urlTemplate).build(uriVariables);
+            logger.error("GET " + url, exc);
             throw new NotFoundException();
         }
 
@@ -110,7 +132,8 @@ public class UpstreamVSCodeService implements IVSCodeService {
             return response.getHeaders().getLocation().toString();
         }
         if(statusCode.isError() && statusCode != HttpStatus.NOT_FOUND) {
-            logger.error("GET {}: {}", apiUrl, response);
+            var url = UriComponentsBuilder.fromUriString(urlTemplate).build(uriVariables);
+            logger.error("GET {}: {}", url, response);
         }
 
         throw new NotFoundException();
@@ -118,14 +141,15 @@ public class UpstreamVSCodeService implements IVSCodeService {
 
     @Override
     public String getItemUrl(String namespace, String extension) {
-        var apiUrl = UrlUtil.createApiUrl(upstreamUrl, "vscode", "item");
-        apiUrl = UrlUtil.addQuery(apiUrl, "itemName", String.join(".", namespace, extension));
-        var request = new RequestEntity<Void>(HttpMethod.GET, URI.create(apiUrl));
+        var urlTemplate = upstreamUrl + "/vscode/item?itemName={namespace}.{extension}";
+        var uriVariables = Map.of("namespace", namespace, "extension", extension);
+
         ResponseEntity<Void> response;
         try {
-            response = nonRedirectingRestTemplate().exchange(request, Void.class);
+            response = nonRedirectingRestTemplate.exchange(urlTemplate, HttpMethod.GET, null, Void.class, uriVariables);
         } catch (RestClientException exc) {
-            logger.error("GET " + apiUrl, exc);
+            var url = UriComponentsBuilder.fromUriString(urlTemplate).build(uriVariables);
+            logger.error("GET " + url, exc);
             throw new NotFoundException();
         }
 
@@ -134,7 +158,8 @@ public class UpstreamVSCodeService implements IVSCodeService {
             return response.getHeaders().getLocation().toString();
         }
         if(statusCode.isError() && statusCode != HttpStatus.NOT_FOUND) {
-            logger.error("GET {}: {}", apiUrl, response);
+            var url = UriComponentsBuilder.fromUriString(urlTemplate).build(uriVariables);
+            logger.error("GET {}: {}", url, response);
         }
 
         throw new NotFoundException();
@@ -142,14 +167,28 @@ public class UpstreamVSCodeService implements IVSCodeService {
 
     @Override
     public ResponseEntity<byte[]> getAsset(String namespace, String extensionName, String version, String assetType, String targetPlatform, String restOfTheUrl) {
-        var segments = ArrayUtils.addAll(new String[]{ "vscode", "asset", namespace, extensionName, version, assetType,  }, restOfTheUrl.split("/"));
-        var apiUrl = UrlUtil.createApiUrl(upstreamUrl, segments);
-        var request = new RequestEntity<Void>(HttpMethod.GET, URI.create(apiUrl));
+        // TODO add targetPlatform once upstream supports it
+        var urlTemplate = upstreamUrl + "/vscode/asset/{namespace}/{extension}/{version}/{assetType}";
+        var uriVariables = new HashMap<String, String>(Map.of(
+            "namespace", namespace,
+            "extension", extensionName,
+            "version", version,
+            "assetType", assetType
+        ));
+        var segIndex = 0;
+        for (String segment : restOfTheUrl.split("/")) {
+            var varName = "seg" + segIndex;
+            urlTemplate = urlTemplate + "/{" + varName + "}";
+            uriVariables.put(varName, segment);
+            segIndex++;
+        }
+
         ResponseEntity<byte[]> response;
         try {
-            response = restTemplate.exchange(request, byte[].class);
+            response = restTemplate.exchange(urlTemplate, HttpMethod.GET, null, byte[].class, uriVariables);
         } catch (RestClientException exc) {
-            logger.error("GET " + apiUrl, exc);
+            var url = UriComponentsBuilder.fromUriString(urlTemplate).build(uriVariables);
+            logger.error("GET " + url, exc);
             throw new NotFoundException();
         }
 
@@ -158,20 +197,10 @@ public class UpstreamVSCodeService implements IVSCodeService {
             return response;
         }
         if(statusCode.isError() && statusCode != HttpStatus.NOT_FOUND) {
-            logger.error("GET {}: {}", apiUrl, response);
+            var url = UriComponentsBuilder.fromUriString(urlTemplate).build(uriVariables);
+            logger.error("GET {}: {}", url, response);
         }
 
         throw new NotFoundException();
-    }
-
-    private RestTemplate nonRedirectingRestTemplate() {
-        return new RestTemplate(new SimpleClientHttpRequestFactory() {
-            @Override
-            protected void prepareConnection(HttpURLConnection connection, String httpMethod ) {
-                connection.setConnectTimeout(30 * 1000);
-                connection.setReadTimeout(30 * 1000);
-                connection.setInstanceFollowRedirects(false);
-            }
-        });
     }
 }
