@@ -69,6 +69,13 @@ management:
   health:
     probes:
       enabled: true
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - metrics
+          - prometheus
 
 springdoc:
   swagger-ui:

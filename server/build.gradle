@@ -90,6 +90,7 @@ dependencies {
         exclude group: 'org.antlr', module: 'antlr'
         exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
     }
+    runtimeOnly "io.micrometer:micrometer-registry-prometheus"
     runtimeOnly "org.postgresql:postgresql"
     jooqGenerator "org.postgresql:postgresql"
 
