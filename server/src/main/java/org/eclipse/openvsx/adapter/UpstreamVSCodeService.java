@@ -166,6 +166,8 @@ public class UpstreamVSCodeService implements IVSCodeService {
         return new RestTemplate(new SimpleClientHttpRequestFactory() {
             @Override
             protected void prepareConnection(HttpURLConnection connection, String httpMethod ) {
+                connection.setConnectTimeout(30 * 1000);
+                connection.setReadTimeout(30 * 1000);
                 connection.setInstanceFollowRedirects(false);
             }
         });

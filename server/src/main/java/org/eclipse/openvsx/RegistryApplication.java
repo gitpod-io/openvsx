@@ -34,6 +34,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Duration;
+
 import javax.sql.DataSource;
 
 @SpringBootApplication
@@ -49,7 +51,9 @@ public class RegistryApplication {
 
 	@Bean
 	public RestTemplate restTemplate(RestTemplateBuilder builder) {
-		return builder
+        return builder
+            .setConnectTimeout(Duration.ofSeconds(30))
+            .setReadTimeout(Duration.ofSeconds(30))
             .messageConverters(
                 new ByteArrayHttpMessageConverter(),
                 new StringHttpMessageConverter(),
