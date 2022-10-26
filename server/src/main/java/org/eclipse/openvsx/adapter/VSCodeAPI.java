@@ -93,6 +93,7 @@ public class VSCodeAPI {
         var extensionsIter = extensions.iterator();
         while (extensionsIter.hasNext() && resultItem.extensions.size() < limit) {
             var next = extensionsIter.next();
+            // TODO(gitpod): compare extension's versions
             var noneMatch = previous.stream()
                     .noneMatch(prev -> {
                         var prevPublisher = prev.publisher.publisherName;
