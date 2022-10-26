@@ -89,7 +89,7 @@ public class UpstreamVSCodeService implements IVSCodeService {
 
         ResponseEntity<byte[]> response;
         try {
-            response = restTemplate.exchange(urlTemplate, HttpMethod.GET, null, byte[].class, uriVariables);
+            response = nonRedirectingRestTemplate.exchange(urlTemplate, HttpMethod.GET, null, byte[].class, uriVariables);
         } catch(RestClientException exc) {
             var url = UriComponentsBuilder.fromUriString(urlTemplate).build(uriVariables);
             logger.error("GET " + url, exc);
@@ -185,7 +185,7 @@ public class UpstreamVSCodeService implements IVSCodeService {
 
         ResponseEntity<byte[]> response;
         try {
-            response = restTemplate.exchange(urlTemplate, HttpMethod.GET, null, byte[].class, uriVariables);
+            response = nonRedirectingRestTemplate.exchange(urlTemplate, HttpMethod.GET, null, byte[].class, uriVariables);
         } catch (RestClientException exc) {
             var url = UriComponentsBuilder.fromUriString(urlTemplate).build(uriVariables);
             logger.error("GET " + url, exc);
