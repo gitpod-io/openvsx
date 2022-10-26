@@ -96,6 +96,7 @@ public class MirrorExtensionJob implements Job {
 
                 for (var extensionJson : toAdd) {
                     var mirrorExtensionVersionJobKey = schedulerService.mirrorExtensionVersion(extensionJson);
+                    // TODO: cleanup mirrorExtensionVersionJobKey if prevPublishExtensionVersionJobKey fails but after retries
                     schedulerService.tryChainMirrorJobs(prevPublishExtensionVersionJobKey, mirrorExtensionVersionJobKey);
 
                     prevPublishExtensionVersionJobKey = schedulerService.generatePublishExtensionVersionJobKey(namespaceName, extensionName, targetPlatform, extensionJson.version);

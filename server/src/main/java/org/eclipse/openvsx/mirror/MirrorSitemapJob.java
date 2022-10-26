@@ -40,6 +40,7 @@ import static org.eclipse.openvsx.schedule.JobUtil.starting;
 import static org.eclipse.openvsx.util.UrlUtil.createApiUrl;
 
 @PersistJobDataAfterExecution
+@DisallowConcurrentExecution
 public class MirrorSitemapJob implements Job {
     private static final String LAST_EXECUTED = "lastExecuted";
     protected final Logger logger = LoggerFactory.getLogger(MirrorSitemapJob.class);
@@ -84,6 +85,7 @@ public class MirrorSitemapJob implements Job {
                     continue;
                 }
 
+                // TODO: improve check if extension was updated or not
                 var lastModified = url.getElementsByTagName("lastmod").item(0).getTextContent();
                 if(lastExecuted == null || !LocalDate.parse(lastModified, dateFormatter).isBefore(lastExecuted)) {
                     schedulerService.mirrorExtension(namespace, extension, lastModified);

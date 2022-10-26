@@ -12,6 +12,7 @@ package org.eclipse.openvsx.mirror;
 import org.eclipse.openvsx.repositories.RepositoryService;
 import org.eclipse.openvsx.schedule.SchedulerService;
 import org.eclipse.openvsx.util.TimeUtil;
+import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -25,6 +26,7 @@ import java.time.LocalDateTime;
 import static org.eclipse.openvsx.schedule.JobUtil.completed;
 import static org.eclipse.openvsx.schedule.JobUtil.starting;
 
+@DisallowConcurrentExecution
 public class MirrorMetadataJob implements Job {
 
     protected final Logger logger = LoggerFactory.getLogger(MirrorMetadataJob.class);
