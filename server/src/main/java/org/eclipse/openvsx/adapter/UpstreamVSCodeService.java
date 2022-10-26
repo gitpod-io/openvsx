@@ -101,7 +101,8 @@ public class UpstreamVSCodeService implements IVSCodeService {
         if(statusCode.is2xxSuccessful() || statusCode.is3xxRedirection()) {
             var headers = new HttpHeaders();
             headers.addAll(response.getHeaders());
-            headers.remove("Access-control-allow-origin");
+            headers.remove(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN);
+            headers.remove(HttpHeaders.VARY);
             return new ResponseEntity<>(response.getBody(), headers, response.getStatusCode());
         }
         if(statusCode.isError() && statusCode != HttpStatus.NOT_FOUND) {
@@ -200,7 +201,8 @@ public class UpstreamVSCodeService implements IVSCodeService {
         if(statusCode.is2xxSuccessful() || statusCode.is3xxRedirection()) {
             var headers = new HttpHeaders();
             headers.addAll(response.getHeaders());
-            headers.remove("Access-control-allow-origin");
+            headers.remove(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN);
+            headers.remove(HttpHeaders.VARY);
             return new ResponseEntity<>(response.getBody(), headers, response.getStatusCode());
         }
         if(statusCode.isError() && statusCode != HttpStatus.NOT_FOUND) {

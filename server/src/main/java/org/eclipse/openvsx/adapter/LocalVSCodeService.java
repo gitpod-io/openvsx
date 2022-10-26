@@ -395,13 +395,14 @@ public class LocalVSCodeService implements IVSCodeService {
                 .orElse(null);
 
         if (extVersion == null) {
-            return ResponseEntity.notFound().build();
+            throw new NotFoundException();
         }
 
         var resources = repositories.findAllResourceFileResourceDTOs(extVersion.getId(), path);
         if(resources.isEmpty()) {
             throw new NotFoundException();
         } else if(resources.size() == 1 && resources.get(0).getName().equals(path)) {
+            // TODO: This is broken, trying to install vim extension goes to browseDirectory
             return browseFile(resources.get(0), namespaceName, extensionName, extVersion.getTargetPlatform(), version);
         } else {
             return browseDirectory(resources, namespaceName, extensionName, version, path);

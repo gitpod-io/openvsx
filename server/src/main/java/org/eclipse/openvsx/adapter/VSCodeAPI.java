@@ -13,6 +13,7 @@ import org.eclipse.openvsx.util.NotFoundException;
 import org.eclipse.openvsx.util.TargetPlatform;
 import org.eclipse.openvsx.util.UrlUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +37,9 @@ public class VSCodeAPI {
 
     @Autowired
     UpstreamVSCodeService upstream;
+
+    @Value("${ovsx.data.mirror.enabled:false}")
+    boolean mirrorModeEnabled;
 
     private Iterable<IVSCodeService> getVSCodeServices() {
         var registries = new ArrayList<IVSCodeService>();
@@ -64,10 +68,8 @@ public class VSCodeAPI {
         var resultItem = new ExtensionQueryResult.ResultItem();
         resultItem.extensions = new ArrayList<>(size);
 
-        var services = getVSCodeServices().iterator();
-        while(resultItem.extensions.size() < size && services.hasNext()) {
+        for (var service : getVSCodeServices()) {
             try {
-                var service = services.next();
                 var extensionCount = resultItem.extensions.size();
                 var subResult = service.extensionQuery(param, DEFAULT_PAGE_SIZE);
                 var subExtensions = subResult.results.get(0).extensions;
@@ -77,9 +79,13 @@ public class VSCodeAPI {
                     mergeExtensionQueryResults(resultItem, subExtensions, limit);
                 }
 
-                var mergedExtensionsCount = resultItem.extensions.size();
                 var subTotalCount = getTotalCount(subResult);
-                totalCount += subTotalCount - ((extensionCount + subExtensionsCount) - mergedExtensionsCount);
+                if (mirrorModeEnabled) {
+                    totalCount = subTotalCount;
+                } else {
+                    var mergedExtensionsCount = resultItem.extensions.size();
+                    totalCount += subTotalCount - ((extensionCount + subExtensionsCount) - mergedExtensionsCount);
+                }
             } catch (NotFoundException | ResponseStatusException exc) {
                 // Try the next registry
             }
@@ -90,10 +96,22 @@ public class VSCodeAPI {
 
     private void mergeExtensionQueryResults(ExtensionQueryResult.ResultItem resultItem, List<ExtensionQueryResult.Extension> extensions, int limit) {
         var previous = new ArrayList<>(resultItem.extensions);
+        for (int i = 0; i < previous.size(); i++) {
+            ExtensionQueryResult.Extension found = null;
+            for (var ext : extensions) {
+                if (ext.extensionId.equals(previous.get(i).extensionId)) {
+                    found = ext;
+                    break;
+                }
+            }
+            if (found != null) {
+                resultItem.extensions.set(i, found);
+            }
+        }
+
         var extensionsIter = extensions.iterator();
         while (extensionsIter.hasNext() && resultItem.extensions.size() < limit) {
             var next = extensionsIter.next();
-            // TODO(gitpod): compare extension's versions
             var noneMatch = previous.stream()
                     .noneMatch(prev -> {
                         var prevPublisher = prev.publisher.publisherName;
