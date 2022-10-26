@@ -10,6 +10,8 @@
 package org.eclipse.openvsx.adapter;
 
 import com.google.common.base.Strings;
+
+import org.apache.commons.lang3.ArrayUtils;
 import org.eclipse.openvsx.util.NotFoundException;
 import org.eclipse.openvsx.util.UrlUtil;
 import org.slf4j.Logger;
@@ -68,7 +70,7 @@ public class UpstreamVSCodeService implements IVSCodeService {
 
     @Override
     public ResponseEntity<byte[]> browse(String namespaceName, String extensionName, String version, String path) {
-        var segments = new String[]{ "vscode", "unpkg", namespaceName, extensionName, version, path };
+        var segments = ArrayUtils.addAll(new String[]{ "vscode", "unpkg", namespaceName, extensionName, version }, path.split("/"));
         var apiUrl = UrlUtil.createApiUrl(upstreamUrl, segments);
         var request = new RequestEntity<Void>(HttpMethod.GET, URI.create(apiUrl));
         ResponseEntity<byte[]> response;
@@ -140,7 +142,7 @@ public class UpstreamVSCodeService implements IVSCodeService {
 
     @Override
     public ResponseEntity<byte[]> getAsset(String namespace, String extensionName, String version, String assetType, String targetPlatform, String restOfTheUrl) {
-        var segments = new String[]{ "vscode", "asset", namespace, extensionName, version, assetType, restOfTheUrl };
+        var segments = ArrayUtils.addAll(new String[]{ "vscode", "asset", namespace, extensionName, version, assetType,  }, restOfTheUrl.split("/"));
         var apiUrl = UrlUtil.createApiUrl(upstreamUrl, segments);
         var request = new RequestEntity<Void>(HttpMethod.GET, URI.create(apiUrl));
         ResponseEntity<byte[]> response;
