@@ -172,7 +172,7 @@ public class UpstreamVSCodeService implements IVSCodeService {
 
     @Override
     public ResponseEntity<byte[]> getAsset(String namespace, String extensionName, String version, String assetType, String targetPlatform, String restOfTheUrl) {
-        // TODO add targetPlatform once upstream supports it
+        // TODO: add targetPlatform once upstream supports it
         var urlTemplate = upstreamUrl + "/vscode/asset/{namespace}/{extension}/{version}/{assetType}";
         var uriVariables = new HashMap<String, String>(Map.of(
             "namespace", namespace,
