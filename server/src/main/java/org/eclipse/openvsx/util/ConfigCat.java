@@ -1,5 +1,6 @@
 package org.eclipse.openvsx.util;
 
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -30,7 +31,8 @@ public class ConfigCat {
 
     
     public String getUpstreamURL(String defaultValue) {
-        return this.getValue(String.class, ConfigCat.UpstreamURL, defaultValue);
+        // We use random UUID here to control traffic
+        return this.getValue(String.class, ConfigCat.UpstreamURL, UUID.randomUUID().toString(), defaultValue);
     }
 
     public <T> T getValue(Class<T> clazz, String key, String userId, T defaultValue) {
