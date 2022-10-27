@@ -106,6 +106,7 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${versions.junit}"
     testRuntimeOnly "org.testcontainers:postgresql:${versions.testcontainers}"
     implementation 'com.google.cloud:spring-cloud-gcp-starter-logging:3.3.0'
+    implementation 'com.configcat:configcat-java-client:7.+'
 }
 
 hibernate {

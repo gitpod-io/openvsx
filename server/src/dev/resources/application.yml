@@ -135,3 +135,6 @@ ovsx:
     base-url: https://api.eclipse.org
     publisher-agreement:
       timezone: US/Eastern
+
+configcat:
+  host: "https://gitpod-staging.com"

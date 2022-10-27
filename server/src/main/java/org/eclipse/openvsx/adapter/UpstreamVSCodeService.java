@@ -11,6 +11,7 @@ package org.eclipse.openvsx.adapter;
 
 import com.google.common.base.Strings;
 
+import org.eclipse.openvsx.util.ConfigCat;
 import org.eclipse.openvsx.util.NotFoundException;
 import org.eclipse.openvsx.util.UrlUtil;
 import org.slf4j.Logger;
@@ -42,16 +43,24 @@ public class UpstreamVSCodeService implements IVSCodeService {
     @Autowired
     RestTemplate nonRedirectingRestTemplate;
 
+    @Autowired
+    ConfigCat configCat;
+
     @Value("${ovsx.upstream.url:}")
-    String upstreamUrl;
+    String defaultUpstreamUrl;
+
+    String getUpstreamUrl() {
+        return configCat.getUpstreamURL(defaultUpstreamUrl);
+    }
+
 
     public boolean isValid() {
-        return !Strings.isNullOrEmpty(upstreamUrl);
+        return !Strings.isNullOrEmpty(getUpstreamUrl());
     }
 
     @Override
     public ExtensionQueryResult extensionQuery(ExtensionQueryParam param, int defaultPageSize) {
-        var apiUrl = UrlUtil.createApiUrl(upstreamUrl, "vscode", "gallery", "extensionquery");
+        var apiUrl = UrlUtil.createApiUrl(getUpstreamUrl(), "vscode", "gallery", "extensionquery");
         var request = new RequestEntity<>(param, HttpMethod.POST, URI.create(apiUrl));
         ResponseEntity<ExtensionQueryResult> response;
         try {
@@ -74,7 +83,7 @@ public class UpstreamVSCodeService implements IVSCodeService {
 
     @Override
     public ResponseEntity<byte[]> browse(String namespaceName, String extensionName, String version, String path) {
-        var urlTemplate = upstreamUrl + "/vscode/unpkg/{namespace}/{extension}/{version}";
+        var urlTemplate = getUpstreamUrl() + "/vscode/unpkg/{namespace}/{extension}/{version}";
         var uriVariables = new HashMap<String, String>(Map.of(
             "namespace", namespaceName,
             "extension", extensionName,
@@ -116,7 +125,7 @@ public class UpstreamVSCodeService implements IVSCodeService {
     @Override
     public String download(String namespace, String extension, String version, String targetPlatform) {
         // TODO add targetPlatform as query parameter once upstream supports it
-        var urlTemplate = upstreamUrl + "/vscode/gallery/publishers/{namespace}/vsextensions/{extension}/{version}/vspackage";
+        var urlTemplate = getUpstreamUrl() + "/vscode/gallery/publishers/{namespace}/vsextensions/{extension}/{version}/vspackage";
         var uriVariables = Map.of(
                 "namespace", namespace,
                 "extension", extension,
@@ -146,7 +155,7 @@ public class UpstreamVSCodeService implements IVSCodeService {
 
     @Override
     public String getItemUrl(String namespace, String extension) {
-        var urlTemplate = upstreamUrl + "/vscode/item?itemName={namespace}.{extension}";
+        var urlTemplate = getUpstreamUrl() + "/vscode/item?itemName={namespace}.{extension}";
         var uriVariables = Map.of("namespace", namespace, "extension", extension);
 
         ResponseEntity<Void> response;
@@ -173,7 +182,7 @@ public class UpstreamVSCodeService implements IVSCodeService {
     @Override
     public ResponseEntity<byte[]> getAsset(String namespace, String extensionName, String version, String assetType, String targetPlatform, String restOfTheUrl) {
         // TODO: add targetPlatform once upstream supports it
-        var urlTemplate = upstreamUrl + "/vscode/asset/{namespace}/{extension}/{version}/{assetType}";
+        var urlTemplate = getUpstreamUrl() + "/vscode/asset/{namespace}/{extension}/{version}/{assetType}";
         var uriVariables = new HashMap<String, String>(Map.of(
             "namespace", namespace,
             "extension", extensionName,
