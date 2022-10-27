@@ -31,23 +31,10 @@ public class ConfigCat {
 
     
     public String getUpstreamURL(String defaultValue) {
-        // We use random UUID here to control traffic
-        return this.getValue(String.class, ConfigCat.UpstreamURL, UUID.randomUUID().toString(), defaultValue);
-    }
-
-    public <T> T getValue(Class<T> clazz, String key, String userId, T defaultValue) {
         return client.getValue(
-            clazz, 
-            key, 
-            User.newBuilder().build(userId),
-            defaultValue
-        );
-    }
-
-    public <T> T getValue(Class<T> clazz, String key, T defaultValue) {
-        return client.getValue(
-            clazz, 
-            key,
+            String.class, 
+            ConfigCat.UpstreamURL, 
+            User.newBuilder().build(UUID.randomUUID().toString()), // We use random UUID here to control traffic
             defaultValue
         );
     }
