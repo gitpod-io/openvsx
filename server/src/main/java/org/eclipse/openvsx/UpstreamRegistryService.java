@@ -20,7 +20,6 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.http.*;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
-
 import org.eclipse.openvsx.json.ExtensionJson;
 import org.eclipse.openvsx.json.NamespaceJson;
 import org.eclipse.openvsx.json.QueryParamJson;
@@ -38,20 +37,21 @@ public class UpstreamRegistryService implements IExtensionRegistry {
     protected final Logger logger = LoggerFactory.getLogger(UpstreamRegistryService.class);
 
     private RestTemplate restTemplate;
-    private String upstreamUrl;
 
-    public UpstreamRegistryService(RestTemplate restTemplate, String upstreamUrl) {
+    UrlConfigService urlConfigService;
+
+    public UpstreamRegistryService(RestTemplate restTemplate, UrlConfigService urlConfigService) {
         this.restTemplate = restTemplate;
-        this.upstreamUrl = upstreamUrl;
+        this.urlConfigService = urlConfigService;
     }
 
     public boolean isValid() {
-        return !Strings.isNullOrEmpty(upstreamUrl);
+        return !Strings.isNullOrEmpty(urlConfigService.getUpstreamUrl());
     }
 
     @Override
     public NamespaceJson getNamespace(String namespace) {
-        var urlTemplate = upstreamUrl + "/api/{namespace}";
+        var urlTemplate = urlConfigService.getUpstreamUrl() + "/api/{namespace}";
         var uriVariables = Map.of("namespace", namespace);
         try {
             return restTemplate.getForObject(urlTemplate, NamespaceJson.class, uriVariables);
@@ -67,7 +67,7 @@ public class UpstreamRegistryService implements IExtensionRegistry {
 
     @Override
     public ExtensionJson getExtension(String namespace, String extension, String targetPlatform) {
-        var urlTemplate = upstreamUrl + "/api/{namespace}/{extension}";
+        var urlTemplate = urlConfigService.getUpstreamUrl() + "/api/{namespace}/{extension}";
         var uriVariables = new HashMap<String, String>();
         uriVariables.put("namespace", namespace);
         uriVariables.put("extension", extension);
@@ -92,7 +92,7 @@ public class UpstreamRegistryService implements IExtensionRegistry {
 
     @Override
     public ExtensionJson getExtension(String namespace, String extension, String targetPlatform, String version) {
-        var urlTemplate = upstreamUrl + "/api/{namespace}/{extension}";
+        var urlTemplate = urlConfigService.getUpstreamUrl() + "/api/{namespace}/{extension}";
         var uriVariables = new HashMap<String, String>();
         uriVariables.put("namespace", namespace);
         uriVariables.put("extension", extension);
@@ -121,7 +121,7 @@ public class UpstreamRegistryService implements IExtensionRegistry {
 
     @Override
     public ResponseEntity<byte[]> getFile(String namespace, String extension, String targetPlatform, String version, String fileName) {
-        var urlTemplate = upstreamUrl + "/api/{namespace}/{extension}";
+        var urlTemplate = urlConfigService.getUpstreamUrl() + "/api/{namespace}/{extension}";
         var uriVariables = new HashMap<String, String>();
         uriVariables.put("namespace", namespace);
         uriVariables.put("extension", extension);
@@ -172,7 +172,7 @@ public class UpstreamRegistryService implements IExtensionRegistry {
 
     @Override
     public ReviewListJson getReviews(String namespace, String extension) {
-        var urlTemplate = upstreamUrl + "/api/{namespace}/{extension}/reviews";
+        var urlTemplate = urlConfigService.getUpstreamUrl() + "/api/{namespace}/{extension}/reviews";
         var uriVariables = new HashMap<String, String>();
         uriVariables.put("namespace", namespace);
         uriVariables.put("extension", extension);
@@ -191,7 +191,7 @@ public class UpstreamRegistryService implements IExtensionRegistry {
 
 	@Override
 	public SearchResultJson search(ISearchService.Options options) {
-        var urlTemplate = upstreamUrl + "/api/-/search";
+        var urlTemplate = urlConfigService.getUpstreamUrl() + "/api/-/search";
         var uriVariables = new HashMap<String, String>();
         uriVariables.put("size", Integer.toString(options.requestedSize));
         uriVariables.put("offset", Integer.toString(options.requestedOffset));
@@ -233,7 +233,7 @@ public class UpstreamRegistryService implements IExtensionRegistry {
 
     @Override
     public QueryResultJson query(QueryParamJson param) {
-        var urlTemplate = upstreamUrl + "/api/-/query";
+        var urlTemplate = urlConfigService.getUpstreamUrl() + "/api/-/query";
         var uriVariables = new HashMap<String, String>();
         uriVariables.put("includeAllVersions", Boolean.toString(param.includeAllVersions));
         if(param.namespaceName != null) {

@@ -137,4 +137,4 @@ ovsx:
       timezone: US/Eastern
 
 configcat:
-  host: "https://gitpod-staging.com"
+  base-url: "https://gitpod-staging.com/configcat"

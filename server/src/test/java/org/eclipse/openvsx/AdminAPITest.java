@@ -841,6 +841,11 @@ public class AdminAPITest {
         }
 
         @Bean
+        public UrlConfigService urlConfigService() {
+            return new UrlConfigService();
+        }
+
+        @Bean
         TransactionTemplate transactionTemplate() {
             return new MockTransactionTemplate();
         }

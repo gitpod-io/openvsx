@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.openvsx.UrlConfigService;
 import org.eclipse.openvsx.cache.LatestExtensionVersionCacheKeyGenerator;
 import org.eclipse.openvsx.cache.LatestExtensionVersionDTOCacheKeyGenerator;
 import org.eclipse.openvsx.entities.*;
@@ -282,6 +283,11 @@ public class ElasticSearchServiceTest {
         @Bean
         public MeterRegistry registry() {
             return new SimpleMeterRegistry();
+        }
+
+        @Bean
+        public UrlConfigService urlConfigService() {
+            return new UrlConfigService();
         }
         
         @Bean

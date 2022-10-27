@@ -11,19 +11,21 @@ import okhttp3.OkHttpClient;
 @Component
 public class ConfigCat {
 
-    public static final String UpstreamURL = "self_hosted_openvsx_upstream_url";
+    public static final String UpstreamURL = "openvsx_mirror_upstream_url";
 
     ConfigCatClient client;
 
-    public ConfigCat(@Value("${configcat.host:https://gitpod-staging.com}") String host) {
+    public ConfigCat(@Value("${configcat.base-url:https://gitpod-staging.com/configcat}") String baseUrl, @Value("${configcat.sdkKye:gitpod}") String sdkKey) {
         var httpClient = new OkHttpClient.Builder()
             .readTimeout(1500, TimeUnit.MILLISECONDS)
             .build();
-        client = ConfigCatClient.newBuilder()
-            .baseUrl(Uri.resolve(host, "/configcat").toString())
+        var builder = ConfigCatClient.newBuilder()
             .mode(PollingModes.autoPoll(60))
-            .httpClient(httpClient)
-            .build("gitpod");
+            .httpClient(httpClient);
+        if (Uri.isValid(baseUrl)) {
+            builder.baseUrl(baseUrl);
+        }
+        client = builder.build(sdkKey);
     }
 
     

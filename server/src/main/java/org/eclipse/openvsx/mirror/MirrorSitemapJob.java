@@ -9,26 +9,10 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.mirror;
 
-import org.eclipse.openvsx.repositories.RepositoryService;
-import org.eclipse.openvsx.schedule.SchedulerService;
-import org.eclipse.openvsx.util.TimeUtil;
-import org.quartz.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.RequestEntity;
-import org.springframework.web.client.RestTemplate;
-import org.w3c.dom.Element;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
+import static org.eclipse.openvsx.schedule.JobUtil.completed;
+import static org.eclipse.openvsx.schedule.JobUtil.starting;
+import static org.eclipse.openvsx.util.UrlUtil.createApiUrl;
 
-import io.micrometer.core.annotation.Timed;
-import io.micrometer.core.annotation.TimedSet;
-
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.URI;
@@ -38,9 +22,30 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.eclipse.openvsx.schedule.JobUtil.completed;
-import static org.eclipse.openvsx.schedule.JobUtil.starting;
-import static org.eclipse.openvsx.util.UrlUtil.createApiUrl;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.eclipse.openvsx.UrlConfigService;
+import org.eclipse.openvsx.repositories.RepositoryService;
+import org.eclipse.openvsx.schedule.SchedulerService;
+import org.eclipse.openvsx.util.TimeUtil;
+import org.quartz.DisallowConcurrentExecution;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
+import org.quartz.PersistJobDataAfterExecution;
+import org.quartz.SchedulerException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.RequestEntity;
+import org.springframework.web.client.RestTemplate;
+import org.w3c.dom.Element;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+
+import io.micrometer.core.annotation.Timed;
 
 @PersistJobDataAfterExecution
 @DisallowConcurrentExecution
@@ -59,9 +64,9 @@ public class MirrorSitemapJob implements Job {
 
     @Autowired
     List<String> excludedExtensions;
-
-    @Value("${ovsx.data.mirror.server-url}")
-    String serverUrl;
+    
+    @Autowired
+    UrlConfigService urlConfigService;
 
     @Override
     @Timed(longTask = true)
@@ -115,7 +120,7 @@ public class MirrorSitemapJob implements Job {
     }
 
     private String getSitemap() {
-        var requestUrl = URI.create(createApiUrl(serverUrl, "sitemap.xml"));
+        var requestUrl = URI.create(createApiUrl(urlConfigService.getMirrorServerUrl(), "sitemap.xml"));
         var request = new RequestEntity<Void>(HttpMethod.GET, requestUrl);
         var response = restTemplate.exchange(request, String.class);
         return response.getStatusCode().is2xxSuccessful() ? response.getBody() : null;

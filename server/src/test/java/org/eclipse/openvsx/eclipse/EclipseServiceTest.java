@@ -28,6 +28,7 @@ import net.javacrumbs.shedlock.core.LockProvider;
 import org.eclipse.openvsx.ExtensionService;
 import org.eclipse.openvsx.ExtensionValidator;
 import org.eclipse.openvsx.MockTransactionTemplate;
+import org.eclipse.openvsx.UrlConfigService;
 import org.eclipse.openvsx.UserService;
 import org.eclipse.openvsx.adapter.VSCodeIdService;
 import org.eclipse.openvsx.cache.CacheService;
@@ -294,6 +295,11 @@ public class EclipseServiceTest {
         @Bean
         public MeterRegistry registry() {
             return new SimpleMeterRegistry();
+        }
+
+        @Bean
+        public UrlConfigService urlConfigService() {
+            return new UrlConfigService();
         }
         
         @Bean

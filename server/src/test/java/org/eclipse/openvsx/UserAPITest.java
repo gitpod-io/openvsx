@@ -546,6 +546,11 @@ public class UserAPITest {
         public MeterRegistry registry() {
             return new SimpleMeterRegistry();
         }
+
+        @Bean
+        public UrlConfigService urlConfigService() {
+            return new UrlConfigService();
+        }
         
         @Bean
         TransactionTemplate transactionTemplate() {

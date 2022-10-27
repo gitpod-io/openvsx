@@ -12,6 +12,7 @@ package org.eclipse.openvsx;
 import net.javacrumbs.shedlock.core.LockProvider;
 import net.javacrumbs.shedlock.provider.jdbctemplate.JdbcTemplateLockProvider;
 import net.javacrumbs.shedlock.spring.annotation.EnableSchedulerLock;
+
 import org.eclipse.openvsx.mirror.ReadOnlyRequestFilter;
 import org.eclipse.openvsx.web.ShallowEtagHeaderFilter;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -100,8 +101,8 @@ public class RegistryApplication {
     }
 
     @Bean
-    public UpstreamRegistryService upstream(RestTemplate restTemplate, @Value("${ovsx.upstream.url:}") String upstreamUrl) {
-        return new UpstreamRegistryService(restTemplate, upstreamUrl);
+    public UpstreamRegistryService upstream(RestTemplate restTemplate, UrlConfigService urlConfigService) {
+        return new UpstreamRegistryService(restTemplate, urlConfigService);
     }
 
     @Bean
@@ -132,10 +133,10 @@ public class RegistryApplication {
     @ConditionalOnProperty(value = "ovsx.data.mirror.enabled", havingValue = "true")
     public IExtensionRegistry mirror(
             RestTemplate restTemplate,
-            @Value("${ovsx.data.mirror.server-url}") String serverUrl,
+            UrlConfigService urlConfigService,
             @Value("${ovsx.data.mirror.requests-per-second:-1}") double requestsPerSecond
     ) {
-        IExtensionRegistry registry = new UpstreamRegistryService(restTemplate, serverUrl);
+        IExtensionRegistry registry = new UpstreamRegistryService(restTemplate, urlConfigService);
         if(requestsPerSecond != -1) {
             registry = new RateLimitedRegistryService(registry, requestsPerSecond);
         }

@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.eclipse.openvsx.ExtensionService;
+import org.eclipse.openvsx.UrlConfigService;
 import org.eclipse.openvsx.cache.LatestExtensionVersionCacheKeyGenerator;
 import org.eclipse.openvsx.cache.LatestExtensionVersionDTOCacheKeyGenerator;
 import org.eclipse.openvsx.entities.*;
@@ -342,6 +343,11 @@ public class DatabaseSearchServiceTest {
         @Bean
         public MeterRegistry registry() {
             return new SimpleMeterRegistry();
+        }
+
+        @Bean
+        public UrlConfigService urlConfigService() {
+            return new UrlConfigService();
         }
         
         @Bean

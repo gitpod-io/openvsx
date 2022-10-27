@@ -32,6 +32,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import net.javacrumbs.shedlock.core.LockProvider;
 import org.eclipse.openvsx.MockTransactionTemplate;
+import org.eclipse.openvsx.UrlConfigService;
 import org.eclipse.openvsx.UserService;
 import org.eclipse.openvsx.cache.CacheService;
 import org.eclipse.openvsx.cache.LatestExtensionVersionCacheKeyGenerator;
@@ -733,6 +734,11 @@ public class VSCodeAPITest {
         @Bean
         public MeterRegistry registry() {
             return new SimpleMeterRegistry();
+        }
+
+        @Bean
+        public UrlConfigService urlConfigService() {
+            return new UrlConfigService();
         }
         
         @Bean
