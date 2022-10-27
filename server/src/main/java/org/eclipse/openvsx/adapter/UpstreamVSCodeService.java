@@ -55,7 +55,6 @@ public class UpstreamVSCodeService implements IVSCodeService {
         var request = new RequestEntity<>(param, HttpMethod.POST, URI.create(apiUrl));
         ResponseEntity<ExtensionQueryResult> response;
         try {
-            request.timeou
             response = restTemplate.exchange(request, ExtensionQueryResult.class);
         } catch(RestClientException exc) {
             logger.error("POST " + apiUrl, exc);
