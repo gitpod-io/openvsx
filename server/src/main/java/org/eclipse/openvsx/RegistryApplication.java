@@ -35,6 +35,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.web.client.RestTemplate;
 
+import io.micrometer.core.aop.TimedAspect;
+import io.micrometer.core.instrument.MeterRegistry;
+
 import java.time.Duration;
 
 import javax.sql.DataSource;
@@ -49,6 +52,11 @@ public class RegistryApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(RegistryApplication.class, args);
+    }
+
+    @Bean
+    public TimedAspect timedAspect(MeterRegistry registry) {
+        return new TimedAspect(registry);
     }
 
 	@Bean

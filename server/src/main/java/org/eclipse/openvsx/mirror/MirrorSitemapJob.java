@@ -24,6 +24,9 @@ import org.w3c.dom.Element;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
+import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.annotation.TimedSet;
+
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
@@ -61,6 +64,7 @@ public class MirrorSitemapJob implements Job {
     String serverUrl;
 
     @Override
+    @Timed(longTask = true)
     public void execute(JobExecutionContext context) throws JobExecutionException {
         starting(context, logger);
         var lastExecuted = (LocalDate) context.getJobDetail().getJobDataMap().get(LAST_EXECUTED);

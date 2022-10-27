@@ -21,6 +21,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.micrometer.core.annotation.Timed;
+
 import java.time.LocalDateTime;
 
 import static org.eclipse.openvsx.schedule.JobUtil.completed;
@@ -38,6 +40,7 @@ public class MirrorMetadataJob implements Job {
     RepositoryService repositories;
 
     @Override
+    @Timed(longTask = true)
     public void execute(JobExecutionContext context) throws JobExecutionException {
         starting(context, logger);
         var now = TimeUtil.toUTCString(LocalDateTime.now());

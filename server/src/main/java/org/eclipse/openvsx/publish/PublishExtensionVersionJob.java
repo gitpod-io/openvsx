@@ -16,6 +16,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.micrometer.core.annotation.Timed;
+
 import java.io.IOException;
 
 import static org.eclipse.openvsx.schedule.JobUtil.completed;
@@ -29,6 +31,7 @@ public class PublishExtensionVersionJob implements Job {
     PublishExtensionVersionService service;
 
     @Override
+    @Timed(longTask = true)
     public void execute(JobExecutionContext context) throws JobExecutionException {
         starting(context, logger);
         var version = context.getMergedJobDataMap().getString("version");

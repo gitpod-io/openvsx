@@ -16,6 +16,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.micrometer.core.annotation.Timed;
+
 import static org.eclipse.openvsx.schedule.JobUtil.completed;
 import static org.eclipse.openvsx.schedule.JobUtil.starting;
 
@@ -27,6 +29,7 @@ public class MirrorActivateExtensionJob implements Job {
     DataMirrorService data;
 
     @Override
+    @Timed(longTask = true)
     public void execute(JobExecutionContext context) throws JobExecutionException {
         starting(context, logger);
         var namespaceName = context.getMergedJobDataMap().getString("namespace");

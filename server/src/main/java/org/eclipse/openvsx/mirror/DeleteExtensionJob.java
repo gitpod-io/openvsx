@@ -19,6 +19,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
+import io.micrometer.core.annotation.Timed;
+
 import static org.eclipse.openvsx.schedule.JobUtil.completed;
 import static org.eclipse.openvsx.schedule.JobUtil.starting;
 
@@ -36,6 +38,7 @@ public class DeleteExtensionJob implements Job {
     String userName;
 
     @Override
+    @Timed(longTask = true)
     public void execute(JobExecutionContext context) throws JobExecutionException {
         starting(context, logger);
         var namespaceName = context.getMergedJobDataMap().getString("namespace");

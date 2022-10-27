@@ -25,6 +25,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
+import io.micrometer.core.annotation.Timed;
+
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.stream.Collectors;
@@ -55,6 +57,7 @@ public class MirrorExtensionJob implements Job {
     String userName;
 
     @Override
+    @Timed(longTask = true)
     public void execute(JobExecutionContext context) throws JobExecutionException {
         starting(context, logger);
         var map = context.getMergedJobDataMap();

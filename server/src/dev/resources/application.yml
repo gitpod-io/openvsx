@@ -76,6 +76,7 @@ management:
           - health
           - metrics
           - prometheus
+          - quartz
 
 springdoc:
   swagger-ui:
