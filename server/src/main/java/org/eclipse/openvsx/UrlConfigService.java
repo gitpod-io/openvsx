@@ -20,10 +20,10 @@ public class UrlConfigService {
     @Value("${ovsx.upstream.url:}")
     String upstreamUrl;
 
-    @Value("${ovsx.data.mirror.server-url:}") 
+    @Value("${ovsx.data.mirror.server-url:}")
     String mirrorServerUrl;
 
-    
+
     @Autowired(required = false)
     ConfigCat configCat;
 
