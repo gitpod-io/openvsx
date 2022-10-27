@@ -66,9 +66,11 @@ public class RegistryApplication {
     @Bean
     public RestTemplate nonRedirectingRestTemplate(RestTemplateBuilder builder) {
         return builder
+            .setConnectTimeout(Duration.ofSeconds(30))
+            .setReadTimeout(Duration.ofSeconds(30))
             .requestFactory(() -> new SimpleClientHttpRequestFactory() {
                 @Override
-                protected void prepareConnection(HttpURLConnection connection, String httpMethod ) {
+                protected void prepareConnection(HttpURLConnection connection, String httpMethod) {
                     connection.setInstanceFollowRedirects(false);
                 }})
             .build();
