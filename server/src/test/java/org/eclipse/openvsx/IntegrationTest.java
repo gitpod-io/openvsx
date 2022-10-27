@@ -13,13 +13,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 
-import com.google.common.io.ByteStreams;
-
 import org.eclipse.openvsx.json.ExtensionJson;
 import org.eclipse.openvsx.json.NamespaceJson;
 import org.eclipse.openvsx.json.ResultJson;
 import org.eclipse.openvsx.json.SearchResultJson;
-import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -27,6 +24,8 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ActiveProfiles;
+
+import com.google.common.io.ByteStreams;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -45,7 +44,6 @@ public class IntegrationTest {
         return "http://localhost:" + port + path;
     }
 
-    @Test
     public void testPublishExtension() throws Exception {
         testService.createUser();
         createNamespace();
