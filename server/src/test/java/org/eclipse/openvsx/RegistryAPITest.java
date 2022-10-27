@@ -80,6 +80,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 @WebMvcTest(RegistryAPI.class)
 @AutoConfigureWebClient
 @MockBean({
@@ -1692,6 +1695,11 @@ public class RegistryAPITest {
     
     @TestConfiguration
     static class TestConfig {
+        @Bean
+        public MeterRegistry registry() {
+            return new SimpleMeterRegistry();
+        }
+        
         @Bean
         TransactionTemplate transactionTemplate() {
             return new MockTransactionTemplate();

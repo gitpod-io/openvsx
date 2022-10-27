@@ -40,6 +40,9 @@ import org.springframework.data.elasticsearch.core.query.IndexQuery;
 import org.springframework.data.util.Streamable;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 @ExtendWith(SpringExtension.class)
 public class ElasticSearchServiceTest {
 
@@ -276,6 +279,11 @@ public class ElasticSearchServiceTest {
     
     @TestConfiguration
     static class TestConfig {
+        @Bean
+        public MeterRegistry registry() {
+            return new SimpleMeterRegistry();
+        }
+        
         @Bean
         ElasticSearchService searchService() {
             return new ElasticSearchService();

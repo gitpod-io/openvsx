@@ -23,6 +23,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 import java.net.URI;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -61,6 +64,11 @@ public class AzureBlobStorageServiceTest {
 
     @TestConfiguration
     static class TestConfig {
+        @Bean
+        public MeterRegistry registry() {
+            return new SimpleMeterRegistry();
+        }
+        
         @Bean
         AzureBlobStorageService azureBlobStorageService() {
             return new AzureBlobStorageService();

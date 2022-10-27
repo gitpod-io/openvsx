@@ -22,6 +22,8 @@ import javax.persistence.EntityManager;
 
 import com.google.common.io.CharStreams;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import net.javacrumbs.shedlock.core.LockProvider;
 import org.eclipse.openvsx.ExtensionService;
 import org.eclipse.openvsx.ExtensionValidator;
@@ -289,6 +291,11 @@ public class EclipseServiceTest {
     
     @TestConfiguration
     static class TestConfig {
+        @Bean
+        public MeterRegistry registry() {
+            return new SimpleMeterRegistry();
+        }
+        
         @Bean
         TransactionTemplate transactionTemplate() {
             return new MockTransactionTemplate();

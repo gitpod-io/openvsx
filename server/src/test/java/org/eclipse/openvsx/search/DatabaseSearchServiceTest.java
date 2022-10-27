@@ -34,6 +34,9 @@ import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.util.Streamable;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 @ExtendWith(SpringExtension.class)
 public class DatabaseSearchServiceTest {
 
@@ -336,6 +339,11 @@ public class DatabaseSearchServiceTest {
 
     @TestConfiguration
     static class TestConfig {
+        @Bean
+        public MeterRegistry registry() {
+            return new SimpleMeterRegistry();
+        }
+        
         @Bean
         DatabaseSearchService searchService() {
             return new DatabaseSearchService();
