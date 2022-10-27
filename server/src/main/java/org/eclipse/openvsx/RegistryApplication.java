@@ -9,9 +9,10 @@
  ********************************************************************************/
 package org.eclipse.openvsx;
 
-import net.javacrumbs.shedlock.core.LockProvider;
-import net.javacrumbs.shedlock.provider.jdbctemplate.JdbcTemplateLockProvider;
-import net.javacrumbs.shedlock.spring.annotation.EnableSchedulerLock;
+import java.net.HttpURLConnection;
+import java.time.Duration;
+
+import javax.sql.DataSource;
 
 import org.eclipse.openvsx.mirror.ReadOnlyRequestFilter;
 import org.eclipse.openvsx.web.ShallowEtagHeaderFilter;
@@ -38,11 +39,9 @@ import org.springframework.web.client.RestTemplate;
 
 import io.micrometer.core.aop.TimedAspect;
 import io.micrometer.core.instrument.MeterRegistry;
-
-import java.time.Duration;
-
-import javax.sql.DataSource;
-import java.net.HttpURLConnection;
+import net.javacrumbs.shedlock.core.LockProvider;
+import net.javacrumbs.shedlock.provider.jdbctemplate.JdbcTemplateLockProvider;
+import net.javacrumbs.shedlock.spring.annotation.EnableSchedulerLock;
 
 @SpringBootApplication
 @EnableScheduling
@@ -63,8 +62,8 @@ public class RegistryApplication {
 	@Bean
 	public RestTemplate restTemplate(RestTemplateBuilder builder) {
         return builder
-            .setConnectTimeout(Duration.ofSeconds(30))
-            .setReadTimeout(Duration.ofSeconds(30))
+            .setConnectTimeout(Duration.ofSeconds(10))
+            .setReadTimeout(Duration.ofSeconds(10))
             .messageConverters(
                 new ByteArrayHttpMessageConverter(),
                 new StringHttpMessageConverter(),
@@ -75,8 +74,8 @@ public class RegistryApplication {
     @Bean
     public RestTemplate nonRedirectingRestTemplate(RestTemplateBuilder builder) {
         return builder
-            .setConnectTimeout(Duration.ofSeconds(30))
-            .setReadTimeout(Duration.ofSeconds(30))
+            .setConnectTimeout(Duration.ofSeconds(10))
+            .setReadTimeout(Duration.ofSeconds(10))
             .requestFactory(() -> new SimpleClientHttpRequestFactory() {
                 @Override
                 protected void prepareConnection(HttpURLConnection connection, String httpMethod) {
