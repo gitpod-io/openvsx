@@ -56,7 +56,7 @@ public class DataMirrorService {
     StorageUtilService storageUtil;
 
     @Autowired
-    RestTemplate restTemplate;
+    RestTemplate contentRestTemplate;
 
     @Autowired
     IExtensionRegistry mirror;
@@ -135,9 +135,8 @@ public class DataMirrorService {
         }
 
         var url = storageUtil.getLocation(resource);
-        var request = new RequestEntity<Void>(HttpMethod.HEAD, url);
         try {
-            restTemplate.exchange(request, byte[].class);
+            contentRestTemplate.exchange("{canGetIconUri}", HttpMethod.HEAD, null, byte[].class, Map.of("canGetIconUri", url));
         } catch(HttpClientErrorException | HttpServerErrorException exc) {
             logger.error(exc.getStatusCode().value() + " " + exc.getStatusCode().name() + " - " + url);
             return false;

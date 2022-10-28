@@ -11,6 +11,7 @@ package org.eclipse.openvsx.storage;
 
 import static org.eclipse.openvsx.entities.FileResource.*;
 
+import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledFuture;
 
@@ -51,7 +52,7 @@ public class StorageMigration {
     StorageUtilService storageUtil;
 
     @Autowired
-    RestTemplate restTemplate;
+    RestTemplate contentRestTemplate;
 
     @Value("${ovsx.storage.migration-delay:500}")
     long migrationDelay;
@@ -121,7 +122,7 @@ public class StorageMigration {
 
     private byte[] downloadFile(FileResource resource) {
         var location = storageUtil.getLocation(resource);
-        return restTemplate.getForObject(location, byte[].class);
+        return contentRestTemplate.getForObject("{migrateUri}", byte[].class, Map.of("migrateUri", location));
     }
 
 }

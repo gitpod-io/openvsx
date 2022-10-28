@@ -36,6 +36,7 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.DefaultUriBuilderFactory;
 
 import io.micrometer.core.aop.TimedAspect;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -69,6 +70,22 @@ public class RegistryApplication {
                 new StringHttpMessageConverter(),
                 new MappingJackson2HttpMessageConverter())
             .build();
+    }
+
+	@Bean
+	public RestTemplate contentRestTemplate(RestTemplateBuilder builder) {
+        var template = builder
+            .setConnectTimeout(Duration.ofSeconds(30))
+            .setReadTimeout(Duration.ofMinutes(5))
+            .messageConverters(
+                new ByteArrayHttpMessageConverter(),
+                new StringHttpMessageConverter(),
+                new MappingJackson2HttpMessageConverter())
+            .build();
+        DefaultUriBuilderFactory defaultUriBuilderFactory = new DefaultUriBuilderFactory();
+        defaultUriBuilderFactory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.NONE);
+        template.setUriTemplateHandler(defaultUriBuilderFactory);
+        return template;
     }
 
     @Bean

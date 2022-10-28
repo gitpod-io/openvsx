@@ -9,6 +9,13 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.mirror;
 
+import static org.eclipse.openvsx.schedule.JobUtil.completed;
+import static org.eclipse.openvsx.schedule.JobUtil.starting;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.Map;
+
 import org.eclipse.openvsx.LocalRegistryService;
 import org.eclipse.openvsx.UserService;
 import org.eclipse.openvsx.entities.Namespace;
@@ -28,19 +35,12 @@ import org.springframework.web.client.RestTemplate;
 
 import io.micrometer.core.annotation.Timed;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.net.URI;
-
-import static org.eclipse.openvsx.schedule.JobUtil.completed;
-import static org.eclipse.openvsx.schedule.JobUtil.starting;
-
 public class MirrorExtensionVersionJob implements Job {
 
     protected final Logger logger = LoggerFactory.getLogger(MirrorExtensionVersionJob.class);
 
     @Autowired
-    RestTemplate restTemplate;
+    RestTemplate contentRestTemplate;
 
     @Autowired
     DataMirrorService data;
@@ -67,7 +67,7 @@ public class MirrorExtensionVersionJob implements Job {
         userJson.avatarUrl = map.getString("userAvatarUrl");
         userJson.homepage = map.getString("userHomepage");
         var namespaceName = map.getString("namespace");
-        var vsixPackage = restTemplate.getForObject(URI.create(download), byte[].class);
+        var vsixPackage = contentRestTemplate.getForObject("{mirrorExtensionVersionUri}", byte[].class, Map.of("mirrorExtensionVersionUri", download));
 
         var user = data.getOrAddUser(userJson);
         var namespace = repositories.findNamespace(namespaceName);

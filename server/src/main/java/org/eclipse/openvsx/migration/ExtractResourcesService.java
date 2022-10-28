@@ -37,7 +37,7 @@ public class ExtractResourcesService {
     RepositoryService repositories;
 
     @Autowired
-    RestTemplate restTemplate;
+    RestTemplate contentRestTemplate;
 
     @Autowired
     AzureBlobStorageService azureStorage;
@@ -66,7 +66,7 @@ public class ExtractResourcesService {
         } else {
             var storage = getStorage(download);
             var uri = storage.getLocation(download);
-            content = restTemplate.getForObject(uri, byte[].class);
+            content = contentRestTemplate.getForObject("{extractResourceUri}", byte[].class, Map.of("extractResourceUri", uri));
         }
 
         try(var input = new ByteArrayInputStream(content)) {
