@@ -34,7 +34,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.RequestEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
@@ -143,7 +142,7 @@ public class DataMirrorService {
 
         var url = storageUtil.getLocation(resource);
         try {
-            contentRestTemplate.exchange("{canGetIconUri}", HttpMethod.HEAD, null, byte[].class, Map.of("canGetIconUri", url));
+            contentRestTemplate.exchange("{canGetVsixUri}", HttpMethod.HEAD, null, byte[].class, Map.of("canGetVsixUri", url));
         } catch(HttpClientErrorException | HttpServerErrorException exc) {
             logger.error(exc.getStatusCode().value() + " " + exc.getStatusCode().name() + " - " + url);
             return false;
