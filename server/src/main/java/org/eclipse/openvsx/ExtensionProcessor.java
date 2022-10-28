@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
+import org.eclipse.openvsx.entities.Extension;
 import org.eclipse.openvsx.entities.ExtensionVersion;
 import org.eclipse.openvsx.entities.FileResource;
 import org.eclipse.openvsx.util.ArchiveUtil;
@@ -230,37 +231,49 @@ public class ExtensionProcessor implements AutoCloseable {
         return preReleaseNode.path("Value").asBoolean(false);
     }
 
-    public ExtensionVersion getMetadata() {
-        loadPackageJson();
+    public String getDisplayName() {
         loadVsixManifest();
-        var extension = new ExtensionVersion();
-        extension.setVersion(getVersion());
-        extension.setTargetPlatform(getTargetPlatform());
-        extension.setPreview(isPreview());
-        extension.setPreRelease(isPreRelease());
-        extension.setDisplayName(vsixManifest.path("Metadata").path("DisplayName").asText());
-        extension.setDescription(vsixManifest.path("Metadata").path("Description").path("").asText());
-        extension.setEngines(getEngines(packageJson.path("engines")));
-        extension.setCategories(asStringList(vsixManifest.path("Metadata").path("Categories").asText(), ","));
-        extension.setExtensionKind(getExtensionKinds());
-        extension.setTags(getTags());
-        extension.setLicense(packageJson.path("license").textValue());
-        extension.setHomepage(getHomepage());
-        extension.setRepository(getRepository());
-        extension.setBugs(getBugs());
-        extension.setMarkdown(packageJson.path("markdown").textValue());
-        extension.setGalleryColor(getGalleryColor());
-        extension.setGalleryTheme(getGalleryTheme());
-        extension.setQna(packageJson.path("qna").textValue());
-
-        return extension;
+        return vsixManifest.path("Metadata").path("DisplayName").asText();
     }
 
-    private String getVersion() {
+    public String getDescription() {
+        loadVsixManifest();
+        return vsixManifest.path("Metadata").path("Description").path("").asText();
+    }
+
+    public ExtensionVersion toExtensionVersion(Extension extension) {
+        var extVersion = new ExtensionVersion();
+        extVersion.setExtension(extension);
+        extVersion.setVersion(getVersion());
+        extVersion.setTargetPlatform(getTargetPlatform());
+        extVersion.setPreview(isPreview());
+        extVersion.setPreRelease(isPreRelease());
+        extVersion.setDisplayName(getDisplayName());
+        extVersion.setDescription(getDescription());
+        extVersion.setEngines(getEngines());
+        extVersion.setCategories(getCategories());
+        extVersion.setExtensionKind(getExtensionKinds());
+        extVersion.setTags(getTags());
+        extVersion.setLicense(getLicense());
+        extVersion.setHomepage(getHomepage());
+        extVersion.setRepository(getRepository());
+        extVersion.setBugs(getBugs());
+        extVersion.setMarkdown(packageJson.path("markdown").textValue());
+        extVersion.setGalleryColor(getGalleryColor());
+        extVersion.setGalleryTheme(getGalleryTheme());
+        extVersion.setQna(packageJson.path("qna").textValue());
+        return extVersion;
+    }
+
+    public String getVersion() {
+        loadVsixManifest();
+
         return vsixManifest.path("Metadata").path("Identity").path("Version").asText();
     }
 
-    private String getTargetPlatform() {
+    public String getTargetPlatform() {
+        loadVsixManifest();
+
         var targetPlatform = vsixManifest.path("Metadata").path("Identity").path("TargetPlatform").asText();
         if(targetPlatform.isEmpty()) {
             targetPlatform = TargetPlatform.NAME_UNIVERSAL;
@@ -269,7 +282,9 @@ public class ExtensionProcessor implements AutoCloseable {
         return targetPlatform;
     }
 
-    private List<String> getTags() {
+    public List<String> getTags() {
+        loadVsixManifest();
+
         var tags = vsixManifest.path("Metadata").path("Tags").asText();
         return asStringList(tags, ",").stream()
                 .collect(Collectors.groupingBy(String::toLowerCase))
@@ -277,6 +292,12 @@ public class ExtensionProcessor implements AutoCloseable {
                 .sorted(Map.Entry.comparingByKey())
                 .map(e -> e.getValue().get(0))
                 .collect(Collectors.toList());
+    }
+
+    public List<String> getCategories() {
+        loadVsixManifest();
+
+        return asStringList(vsixManifest.path("Metadata").path("Categories").asText(), ",");
     }
 
     private List<String> asStringList(String value, String sep){
@@ -287,7 +308,10 @@ public class ExtensionProcessor implements AutoCloseable {
         return Arrays.asList(value.split(sep));
     }
 
-    private List<String> getEngines(JsonNode node) {
+    public List<String> getEngines() {
+        loadPackageJson();
+
+        var node = packageJson.path("engines");
         if (node.isObject()) {
             var result = new ArrayList<String>();
             var fieldIter = node.fields();
@@ -298,6 +322,12 @@ public class ExtensionProcessor implements AutoCloseable {
             return result;
         }
         return null;
+    }
+
+    public String getLicense() {
+        loadPackageJson();
+
+        return packageJson.path("license").textValue();
     }
 
     public List<FileResource> getResources(ExtensionVersion extVersion) {

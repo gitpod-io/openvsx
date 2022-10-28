@@ -10,20 +10,20 @@
 package org.eclipse.openvsx;
 
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Strings;
-
 import org.eclipse.openvsx.adapter.VSCodeIdService;
 import org.eclipse.openvsx.cache.CacheService;
-import org.eclipse.openvsx.entities.*;
+import org.eclipse.openvsx.entities.Extension;
+import org.eclipse.openvsx.entities.ExtensionVersion;
+import org.eclipse.openvsx.entities.FileResource;
+import org.eclipse.openvsx.entities.PersonalAccessToken;
+import org.eclipse.openvsx.entities.UserData;
 import org.eclipse.openvsx.repositories.RepositoryService;
 import org.eclipse.openvsx.schedule.SchedulerService;
 import org.eclipse.openvsx.search.SearchUtilService;
@@ -34,6 +34,9 @@ import org.quartz.SchedulerException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
 
 @Component
 public class ExtensionService {
@@ -120,38 +123,40 @@ public class ExtensionService {
         if (nameIssue.isPresent()) {
             throw new ErrorResultException(nameIssue.get().toString());
         }
-        var extVersion = processor.getMetadata();
-        if (extVersion.getDisplayName() != null && extVersion.getDisplayName().trim().isEmpty()) {
-            extVersion.setDisplayName(null);
-        }
-        extVersion.setTimestamp(TimeUtil.getCurrentUTC());
-        extVersion.setPublishedWith(token);
-        extVersion.setActive(false);
 
+        var timestamp = TimeUtil.getCurrentUTC();
         var extension = repositories.findExtension(extensionName, namespace);
         if (extension == null) {
             extension = new Extension();
             extension.setActive(false);
             extension.setName(extensionName);
             extension.setNamespace(namespace);
-            extension.setPublishedDate(extVersion.getTimestamp());
+            extension.setPublishedDate(timestamp);
 
             vsCodeIdService.createPublicId(extension);
             entityManager.persist(extension);
         } else {
-            var existingVersion = repositories.findVersion(extVersion.getVersion(), extVersion.getTargetPlatform(), extension);
+            var existingVersion = repositories.findVersion(processor.getVersion(), processor.getTargetPlatform(), extension);
             if (existingVersion != null) {
                 throw new ErrorResultException(
                         "Extension " + namespace.getName() + "." + extension.getName()
-                        + " " + extVersion.getVersion()
-                        + (TargetPlatform.isUniversal(extVersion) ? "" : " (" + extVersion.getTargetPlatform() + ")")
+                        + " " + processor.getVersion()
+                        + (TargetPlatform.isUniversal(processor.getTargetPlatform()) ? "" : " (" + processor.getTargetPlatform() + ")")
                         + " is already published"
                         + (existingVersion.isActive() ? "." : ", but is currently inactive and therefore not visible."));
             }
         }
-        extension.setLastUpdatedDate(extVersion.getTimestamp());
+
+        var extVersion = processor.toExtensionVersion(extension);
+        if (extVersion.getDisplayName() != null && extVersion.getDisplayName().trim().isEmpty()) {
+            extVersion.setDisplayName(null);
+        }
+        extVersion.setTimestamp(timestamp);
+        extVersion.setPublishedWith(token);
+        extVersion.setActive(false);
+
+        extension.setLastUpdatedDate(timestamp);
         extension.getVersions().add(extVersion);
-        extVersion.setExtension(extension);
 
         var metadataIssues = validator.validateMetadata(extVersion);
         if (!metadataIssues.isEmpty()) {

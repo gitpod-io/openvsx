@@ -13,7 +13,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Arrays;
 
+import org.eclipse.openvsx.entities.Extension;
 import org.eclipse.openvsx.entities.FileResource;
+import org.eclipse.openvsx.entities.Namespace;
 import org.junit.jupiter.api.Test;
 
 class ExtensionProcessorTest {
@@ -26,16 +28,14 @@ class ExtensionProcessorTest {
         ) {
             assertThat(processor.getNamespace()).isEqualTo("Gruntfuggly");
             assertThat(processor.getExtensionName()).isEqualTo("todo-tree");
-
-            var metadata = processor.getMetadata();
-            assertThat(metadata.getVersion()).isEqualTo("0.0.213");
-            assertThat(metadata.getDisplayName()).isEqualTo("Todo Tree");
-            assertThat(metadata.getDescription()).isEqualTo("Show TODO, FIXME, etc. comment tags in a tree view");
-            assertThat(metadata.getEngines()).isEqualTo(Arrays.asList("vscode@^1.46.0"));
-            assertThat(metadata.getCategories()).isEqualTo(Arrays.asList("Other"));
-            assertThat(metadata.getTags()).isEqualTo(Arrays.asList("multi-root ready", "task", "tasklist", "todo"));
-            assertThat(metadata.getLicense()).isEqualTo("MIT");
-            assertThat(metadata.getRepository()).isEqualTo("https://github.com/Gruntfuggly/todo-tree");
+            assertThat(processor.getVersion()).isEqualTo("0.0.213");
+            assertThat(processor.getDisplayName()).isEqualTo("Todo Tree");
+            assertThat(processor.getDescription()).isEqualTo("Show TODO, FIXME, etc. comment tags in a tree view");
+            assertThat(processor.getEngines()).isEqualTo(Arrays.asList("vscode@^1.46.0"));
+            assertThat(processor.getCategories()).isEqualTo(Arrays.asList("Other"));
+            assertThat(processor.getTags()).isEqualTo(Arrays.asList("multi-root ready", "task", "tasklist", "todo"));
+            assertThat(processor.getLicense()).isEqualTo("MIT");
+            assertThat(processor.getRepository()).isEqualTo("https://github.com/Gruntfuggly/todo-tree");
 
             checkResource(processor, FileResource.README, "README.md");
             checkResource(processor, FileResource.ICON, "todo-tree.png");
@@ -78,8 +78,15 @@ class ExtensionProcessorTest {
     }
 
     private void checkResource(ExtensionProcessor processor, String type, String expectedName) {
-        var metadata = processor.getMetadata();
-        var resources = processor.getResources(metadata);
+        var namespace = new Namespace();
+        namespace.setName(processor.getNamespace());
+
+        var extension = new Extension();
+        extension.setName(processor.getExtensionName());
+        extension.setNamespace(namespace);
+
+        var extVersion = processor.toExtensionVersion(extension);
+        var resources = processor.getResources(extVersion);
         var fileOfType = resources.stream()
                 .filter(res -> type.equals(res.getType()))
                 .findAny();
