@@ -64,6 +64,9 @@ public class MirrorSitemapJob implements Job {
 
     @Autowired
     List<String> excludedExtensions;
+
+    @Autowired
+    List<String> includeExtensions;
     
     @Autowired
     UrlConfigService urlConfigService;
@@ -90,7 +93,11 @@ public class MirrorSitemapJob implements Job {
                 var extension = pathParams[pathParams.length - 1];
                 var extensionId = String.join(".", namespace, extension);
                 if(excludedExtensions.contains(namespace + ".*") || excludedExtensions.contains(extensionId)) {
-                    logger.info("Excluded {} extension, skipping", extensionId);
+                    // logger.info("Excluded {} extension, skipping", extensionId);
+                    continue;
+                }
+                if (!includeExtensions.isEmpty() && !includeExtensions.contains(namespace + ".*") && !includeExtensions.contains(extensionId)) {
+                    // logger.info("Excluded {} extension, skipping", extensionId);
                     continue;
                 }
 

@@ -9,12 +9,12 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.mirror;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Configuration
 public class MirrorConfiguration {
@@ -22,6 +22,12 @@ public class MirrorConfiguration {
     @Bean
     @ConfigurationProperties(prefix = "ovsx.data.mirror.excluded-extensions")
     public List<String> excludedExtensions(){
+        return new ArrayList<>();
+    }
+
+    @Bean
+    @ConfigurationProperties(prefix = "ovsx.data.mirror.include-extensions")
+    public List<String> includeExtensions(){
         return new ArrayList<>();
     }
 }

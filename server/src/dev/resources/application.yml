@@ -123,6 +123,11 @@ bucket4j:
               unit: seconds
 
 ovsx:
+  storage:
+    primary-service: azure-blob
+    azure:
+      service-endpoint: https://openvsxorg.blob.core.windows.net/
+      blob-container: resources
   webui:
     url: https://open-vsx.org
   upstream:
