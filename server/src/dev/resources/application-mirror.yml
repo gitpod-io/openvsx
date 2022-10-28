@@ -3,7 +3,7 @@ ovsx:
     mirror:
       enabled: true
       server-url: https://open-vsx.org
-      requests-per-second: 0.5
+      requests-per-second: 5
       user-name: mirror_user
       schedule:
         extensions: '* * * * * ? *'
