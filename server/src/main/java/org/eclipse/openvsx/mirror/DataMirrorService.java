@@ -9,10 +9,21 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.mirror;
 
+import java.util.AbstractMap;
+import java.util.Map;
+
+import javax.persistence.EntityManager;
+import javax.transaction.Transactional;
+
 import org.eclipse.openvsx.ExtensionService;
 import org.eclipse.openvsx.IExtensionRegistry;
 import org.eclipse.openvsx.UserService;
-import org.eclipse.openvsx.entities.*;
+import org.eclipse.openvsx.entities.Extension;
+import org.eclipse.openvsx.entities.ExtensionReview;
+import org.eclipse.openvsx.entities.ExtensionVersion;
+import org.eclipse.openvsx.entities.FileResource;
+import org.eclipse.openvsx.entities.PersonalAccessToken;
+import org.eclipse.openvsx.entities.UserData;
 import org.eclipse.openvsx.json.ReviewJson;
 import org.eclipse.openvsx.json.UserJson;
 import org.eclipse.openvsx.repositories.RepositoryService;
@@ -22,17 +33,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.http.*;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.RequestEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
-
-import javax.persistence.EntityManager;
-import javax.transaction.Transactional;
-import java.util.AbstractMap;
-import java.util.Map;
 
 @Component
 @ConditionalOnProperty(value = "ovsx.data.mirror.enabled", havingValue = "true")
@@ -124,12 +131,12 @@ public class DataMirrorService {
     @Transactional
     public void activateExtension(String namespaceName, String extensionName) {
         var extension = repositories.findExtension(extensionName, namespaceName);
-        extension.getVersions().stream().filter(this::canGetIcon).forEach(extVersion -> extVersion.setActive(true));
+        extension.getVersions().stream().filter(this::canGetVsix).forEach(extVersion -> extVersion.setActive(true));
         extensions.updateExtension(extension);
     }
 
-    private boolean canGetIcon(ExtensionVersion extVersion) {
-        var resource = repositories.findFileByType(extVersion, FileResource.ICON);
+    private boolean canGetVsix(ExtensionVersion extVersion) {
+        var resource = repositories.findFileByType(extVersion, FileResource.DOWNLOAD);
         if (resource == null){
             return false;
         }
