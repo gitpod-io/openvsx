@@ -74,7 +74,10 @@ public class RegistryApplication {
 
 	@Bean
 	public RestTemplate contentRestTemplate(RestTemplateBuilder builder) {
+        DefaultUriBuilderFactory defaultUriBuilderFactory = new DefaultUriBuilderFactory();
+        defaultUriBuilderFactory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.NONE);
         var template = builder
+            .uriTemplateHandler(defaultUriBuilderFactory)
             .setConnectTimeout(Duration.ofSeconds(30))
             .setReadTimeout(Duration.ofMinutes(5))
             .messageConverters(
@@ -82,9 +85,6 @@ public class RegistryApplication {
                 new StringHttpMessageConverter(),
                 new MappingJackson2HttpMessageConverter())
             .build();
-        DefaultUriBuilderFactory defaultUriBuilderFactory = new DefaultUriBuilderFactory();
-        defaultUriBuilderFactory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.NONE);
-        template.setUriTemplateHandler(defaultUriBuilderFactory);
         return template;
     }
 
