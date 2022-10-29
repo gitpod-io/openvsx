@@ -43,6 +43,9 @@ public class MirrorExtensionVersionJob implements Job {
     RestTemplate contentRestTemplate;
 
     @Autowired
+    RestTemplate nonRedirectingRestTemplate;
+
+    @Autowired
     DataMirrorService data;
 
     @Autowired
@@ -67,6 +70,19 @@ public class MirrorExtensionVersionJob implements Job {
         userJson.avatarUrl = map.getString("userAvatarUrl");
         userJson.homepage = map.getString("userHomepage");
         var namespaceName = map.getString("namespace");
+
+        var vsixResourceHeaders = nonRedirectingRestTemplate.headForHeaders(download);
+        var vsixLocation = vsixResourceHeaders.getLocation();
+        if (vsixLocation == null) {
+            throw new JobExecutionException("Failed to parse location header from redirected vsix url");
+        }
+
+        var tokens = vsixLocation.getPath().split("/");
+        var filename = tokens[tokens.length-1];
+        if (!filename.endsWith(".vsix")) {
+            throw new JobExecutionException("Invalid vsix filename from redirected vsix url");
+        }
+
         var vsixPackage = contentRestTemplate.getForObject("{mirrorExtensionVersionUri}", byte[].class, Map.of("mirrorExtensionVersionUri", download));
 
         var user = data.getOrAddUser(userJson);
@@ -82,7 +98,7 @@ public class MirrorExtensionVersionJob implements Job {
             throw new JobExecutionException(e);
         }
 
-        data.updateTimestamps(extJson.namespace, extJson.name, extJson.targetPlatform, extJson.version, extJson.timestamp);
+        data.updateMetadata(extJson.namespace, extJson.name, extJson.targetPlatform, extJson.version, extJson.timestamp, filename);
         completed(context, logger);
     }
 

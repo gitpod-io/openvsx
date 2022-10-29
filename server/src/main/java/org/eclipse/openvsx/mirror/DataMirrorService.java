@@ -95,7 +95,7 @@ public class DataMirrorService {
     }
 
     @Transactional
-    public void updateTimestamps(String namespaceName, String extensionName, String targetPlatform, String version, String timestamp) {
+    public void updateMetadata(String namespaceName, String extensionName, String targetPlatform, String version, String timestamp, String filename) {
         var extVersion = repositories.findVersion(version, targetPlatform, extensionName, namespaceName);
         extVersion.setTimestamp(TimeUtil.fromUTCString(timestamp));
         var extension = extVersion.getExtension();
@@ -104,6 +104,9 @@ public class DataMirrorService {
         }
 
         extension.setLastUpdatedDate(extVersion.getTimestamp());
+
+        var resource = repositories.findFileByType(extVersion, FileResource.DOWNLOAD);
+        resource.setName(filename);
     }
 
     public String getOrAddAccessTokenValue(UserData user, String description) {
