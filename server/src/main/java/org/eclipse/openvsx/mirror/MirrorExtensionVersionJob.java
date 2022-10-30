@@ -16,15 +16,17 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Map;
 
+import org.eclipse.openvsx.ExtensionService;
 import org.eclipse.openvsx.LocalRegistryService;
 import org.eclipse.openvsx.UserService;
+import org.eclipse.openvsx.entities.ExtensionVersion;
 import org.eclipse.openvsx.entities.Namespace;
 import org.eclipse.openvsx.entities.NamespaceMembership;
 import org.eclipse.openvsx.entities.UserData;
-import org.eclipse.openvsx.json.ExtensionJson;
 import org.eclipse.openvsx.json.UserJson;
 import org.eclipse.openvsx.repositories.RepositoryService;
 import org.eclipse.openvsx.util.ErrorResultException;
+import org.eclipse.openvsx.util.TimeUtil;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -56,6 +58,9 @@ public class MirrorExtensionVersionJob implements Job {
 
     @Autowired
     UserService users;
+
+    @Autowired
+    ExtensionService extensions;
 
     @Override
     @Timed(longTask = true)
@@ -89,16 +94,19 @@ public class MirrorExtensionVersionJob implements Job {
         var namespace = repositories.findNamespace(namespaceName);
         getOrAddNamespaceMembership(user, namespace);
 
-        ExtensionJson extJson;
         var description = "MirrorExtensionVersion";
         var accessTokenValue = data.getOrAddAccessTokenValue(user, description);
+
+        ExtensionVersion extVersion;
         try(var input = new ByteArrayInputStream(vsixPackage)) {
-            extJson = local.publish(input, accessTokenValue);
+            var token = users.useAccessToken(accessTokenValue);
+            extVersion = extensions.mirrorVersion(input, token);
         } catch (IOException | ErrorResultException e) {
             throw new JobExecutionException(e);
         }
 
-        data.updateMetadata(extJson.namespace, extJson.name, extJson.targetPlatform, extJson.version, extJson.timestamp, filename);
+        var ext = extVersion.getExtension();
+        data.updateMetadata(ext.getNamespace().getName(), ext.getName(), extVersion.getTargetPlatform(), extVersion.getVersion(), TimeUtil.toUTCString(extVersion.getTimestamp()), filename);
         completed(context, logger);
     }
 

@@ -11,6 +11,7 @@ package org.eclipse.openvsx;
 
 import java.io.InputStream;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
@@ -25,12 +26,11 @@ import org.eclipse.openvsx.entities.FileResource;
 import org.eclipse.openvsx.entities.PersonalAccessToken;
 import org.eclipse.openvsx.entities.UserData;
 import org.eclipse.openvsx.repositories.RepositoryService;
-import org.eclipse.openvsx.schedule.SchedulerService;
 import org.eclipse.openvsx.search.SearchUtilService;
+import org.eclipse.openvsx.storage.StorageUtilService;
 import org.eclipse.openvsx.util.ErrorResultException;
 import org.eclipse.openvsx.util.TargetPlatform;
 import org.eclipse.openvsx.util.TimeUtil;
-import org.quartz.SchedulerException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -62,11 +62,11 @@ public class ExtensionService {
     @Autowired
     ExtensionValidator validator;
 
-    @Autowired
-    SchedulerService schedulerService;
-
     @Value("${ovsx.publishing.require-license:false}")
     boolean requireLicense;
+
+    @Autowired
+    StorageUtilService storageUtil;
 
     @Transactional(TxType.REQUIRED)
     public ExtensionVersion publishVersion(InputStream content, PersonalAccessToken token) {
@@ -95,12 +95,31 @@ public class ExtensionService {
             binary.setStorageType(FileResource.STORAGE_DB);
             entityManager.persist(binary);
 
-            var extension = extVersion.getExtension();
-            var namespace = extension.getNamespace();
-            try {
-                schedulerService.publishExtensionVersion(namespace.getName(), extension.getName(), extVersion.getTargetPlatform(), extVersion.getVersion());
-            } catch (SchedulerException e) {
-                throw new ErrorResultException("Failed to schedule publish extension version job", e);
+            return extVersion;
+        }
+    }
+
+    @Transactional(TxType.REQUIRED)
+    public ExtensionVersion mirrorVersion(InputStream content, PersonalAccessToken token) {
+        try (var processor = new ExtensionProcessor(content)) {
+            // Extract extension metadata from its manifest
+            var extVersion = createExtensionVersion(processor, token.getUser(), token);
+            var dependencies = processor.getExtensionDependencies().stream()
+                    .collect(Collectors.toList());
+            var bundledExtensions = processor.getBundledExtensions().stream()
+                    .map(this::checkBundledExtension)
+                    .collect(Collectors.toList());
+
+            extVersion.setDependencies(dependencies);
+            extVersion.setBundledExtensions(bundledExtensions);
+
+            var storageType = storageUtil.getActiveStorageType();
+            // Do not store RESOURCE types, this should be fixed in upstream too
+            var resources = processor.getResources(extVersion, List.of(FileResource.RESOURCE));
+            for(var resource : resources) {
+                resource.setStorageType(storageType);
+                resource.setContent(null);
+                entityManager.persist(resource);
             }
 
             return extVersion;

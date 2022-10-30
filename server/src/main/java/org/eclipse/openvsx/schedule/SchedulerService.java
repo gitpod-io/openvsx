@@ -154,14 +154,9 @@ public class SchedulerService {
         enqueueJob(job, false);
     }
 
-    public JobKey generatePublishExtensionVersionJobKey(String namespace, String extension, String targetPlatform, String version) {
-        var group = mirrorModeEnabled ? JobUtil.Groups.MIRROR : JobUtil.Groups.PUBLISH;
-        var jobId = "PublishExtensionVersion::" + namespace + "." + extension + "-" + version + "@" + targetPlatform;
-        return new JobKey(jobId, group);
-    }
-
     public void publishExtensionVersion(String namespace, String extension, String targetPlatform, String version) throws SchedulerException {
-        var jobKey = generatePublishExtensionVersionJobKey(namespace, extension, targetPlatform, version);
+        var jobId = "PublishExtensionVersion::" + namespace + "." + extension + "-" + version + "@" + targetPlatform;
+        var jobKey = new JobKey(jobId, JobUtil.Groups.PUBLISH);
         var job = setRetryData(newJob(PublishExtensionVersionJob.class), 3)
                 .withIdentity(jobKey)
                 .withDescription("Publish Extension Version")
@@ -317,10 +312,10 @@ public class SchedulerService {
 
     private int getPriority(JobDetail job) {
         var jobPriorities = Map.of(
-                MirrorActivateExtensionJob.class, 0,
-                MirrorExtensionMetadataJob.class, 1,
-                MirrorNamespaceVerifiedJob.class, 2,
-                PublishExtensionVersionJob.class, 3,
+                PublishExtensionVersionJob.class, 0,
+                MirrorActivateExtensionJob.class, 1,
+                MirrorExtensionMetadataJob.class, 2,
+                MirrorNamespaceVerifiedJob.class, 3,
                 MirrorExtensionVersionJob.class, 4,
                 ExtractResourcesJob.class, 5,
                 DeleteExtensionJob.class, 5,

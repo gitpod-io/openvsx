@@ -9,23 +9,23 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.publish;
 
+import static org.eclipse.openvsx.entities.FileResource.DOWNLOAD;
+import static org.eclipse.openvsx.entities.FileResource.LICENSE;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.List;
+
+import javax.persistence.EntityManager;
+import javax.transaction.Transactional;
+
 import org.eclipse.openvsx.ExtensionProcessor;
 import org.eclipse.openvsx.ExtensionService;
 import org.eclipse.openvsx.entities.FileResource;
 import org.eclipse.openvsx.repositories.RepositoryService;
 import org.eclipse.openvsx.storage.StorageUtilService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
-import javax.persistence.EntityManager;
-import javax.transaction.Transactional;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.util.List;
-
-import static org.eclipse.openvsx.entities.FileResource.DOWNLOAD;
-import static org.eclipse.openvsx.entities.FileResource.LICENSE;
 
 @Component
 public class PublishExtensionVersionService {
@@ -41,9 +41,6 @@ public class PublishExtensionVersionService {
 
     @Autowired
     StorageUtilService storageUtil;
-
-    @Value("${ovsx.data.mirror.enabled:false}")
-    boolean mirrorModeEnabled;
 
     @Transactional
     public void publish(String namespaceName, String extensionName, String targetPlatform, String version) throws IOException {
@@ -70,11 +67,8 @@ public class PublishExtensionVersionService {
             }
         }
 
-        // When mirror mode is enabled all extension versions are activated at once in MirrorActivateExtensionJob
-        if(!mirrorModeEnabled) {
-            // Update whether extension is active, the search index and evict cache
-            extVersion.setActive(true);
-            extensions.updateExtension(extVersion.getExtension());
-        }
+        // Update whether extension is active, the search index and evict cache
+        extVersion.setActive(true);
+        extensions.updateExtension(extVersion.getExtension());
     }
 }

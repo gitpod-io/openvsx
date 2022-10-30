@@ -333,9 +333,17 @@ public class LocalVSCodeService implements IVSCodeService {
                         ? assetType.substring((FILE_WEB_RESOURCES.length()))
                         : null;
 
-                return name != null && name.startsWith("extension/") // is web resource
-                        ? repositories.findFileByTypeAndName(extVersion, FileResource.RESOURCE, name)
-                        : null;
+                // if it's web resource
+                if (name != null && name.startsWith("extension/")) {
+                    var resource =  new FileResource();
+                    resource.setExtension(extVersion);
+                    resource.setName(name);
+                    resource.setType(FileResource.RESOURCE);
+                    resource.setStorageType(storageUtil.getActiveStorageType());
+                    return resource;
+                }
+
+                return null;
             }
         }
     }

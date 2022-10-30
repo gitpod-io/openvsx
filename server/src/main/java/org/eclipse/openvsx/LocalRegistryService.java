@@ -11,31 +11,70 @@ package org.eclipse.openvsx;
 
 import static org.eclipse.openvsx.cache.CacheService.CACHE_EXTENSION_JSON;
 import static org.eclipse.openvsx.cache.CacheService.GENERATOR_EXTENSION_JSON;
-import static org.eclipse.openvsx.entities.FileResource.*;
+import static org.eclipse.openvsx.entities.FileResource.CHANGELOG;
+import static org.eclipse.openvsx.entities.FileResource.DOWNLOAD;
+import static org.eclipse.openvsx.entities.FileResource.ICON;
+import static org.eclipse.openvsx.entities.FileResource.LICENSE;
+import static org.eclipse.openvsx.entities.FileResource.MANIFEST;
+import static org.eclipse.openvsx.entities.FileResource.README;
 import static org.eclipse.openvsx.util.UrlUtil.createApiUrl;
 
 import java.io.InputStream;
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 
-import com.google.common.base.Strings;
-import com.google.common.collect.Maps;
-
 import org.eclipse.openvsx.cache.CacheService;
-import org.eclipse.openvsx.dto.*;
+import org.eclipse.openvsx.dto.ExtensionDTO;
+import org.eclipse.openvsx.dto.ExtensionVersionDTO;
+import org.eclipse.openvsx.dto.FileResourceDTO;
+import org.eclipse.openvsx.dto.NamespaceDTO;
+import org.eclipse.openvsx.dto.NamespaceMembershipDTO;
 import org.eclipse.openvsx.eclipse.EclipseService;
-import org.eclipse.openvsx.entities.*;
-import org.eclipse.openvsx.json.*;
+import org.eclipse.openvsx.entities.Extension;
+import org.eclipse.openvsx.entities.ExtensionReview;
+import org.eclipse.openvsx.entities.ExtensionVersion;
+import org.eclipse.openvsx.entities.FileResource;
+import org.eclipse.openvsx.entities.Namespace;
+import org.eclipse.openvsx.entities.NamespaceMembership;
+import org.eclipse.openvsx.entities.PersonalAccessToken;
+import org.eclipse.openvsx.entities.UserData;
+import org.eclipse.openvsx.json.ExtensionJson;
+import org.eclipse.openvsx.json.NamespaceJson;
+import org.eclipse.openvsx.json.QueryParamJson;
+import org.eclipse.openvsx.json.QueryResultJson;
+import org.eclipse.openvsx.json.ResultJson;
+import org.eclipse.openvsx.json.ReviewJson;
+import org.eclipse.openvsx.json.ReviewListJson;
+import org.eclipse.openvsx.json.SearchEntryJson;
+import org.eclipse.openvsx.json.SearchResultJson;
 import org.eclipse.openvsx.repositories.RepositoryService;
+import org.eclipse.openvsx.schedule.SchedulerService;
 import org.eclipse.openvsx.search.ExtensionSearch;
 import org.eclipse.openvsx.search.ISearchService;
 import org.eclipse.openvsx.search.SearchUtilService;
 import org.eclipse.openvsx.storage.StorageUtilService;
-import org.eclipse.openvsx.util.*;
+import org.eclipse.openvsx.util.ErrorResultException;
+import org.eclipse.openvsx.util.NotFoundException;
+import org.eclipse.openvsx.util.SemanticVersion;
+import org.eclipse.openvsx.util.TargetPlatform;
+import org.eclipse.openvsx.util.TimeUtil;
+import org.eclipse.openvsx.util.UrlUtil;
+import org.eclipse.openvsx.util.VersionAlias;
+import org.eclipse.openvsx.util.VersionService;
+import org.quartz.SchedulerException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -47,6 +86,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
+
+import com.google.common.base.Strings;
+import com.google.common.collect.Maps;
 
 @Component
 public class LocalRegistryService implements IExtensionRegistry {
@@ -80,6 +122,9 @@ public class LocalRegistryService implements IExtensionRegistry {
 
     @Autowired
     CacheService cache;
+
+    @Autowired
+    SchedulerService schedulerService;
 
     @Override
     public NamespaceJson getNamespace(String namespaceName) {
@@ -474,6 +519,14 @@ public class LocalRegistryService implements IExtensionRegistry {
         eclipse.checkPublisherAgreement(token.getUser());
 
         var extVersion = extensions.publishVersion(content, token);
+
+        var extension = extVersion.getExtension();
+        try {
+            schedulerService.publishExtensionVersion(extension.getNamespace().getName(), extension.getName(), extVersion.getTargetPlatform(), extVersion.getVersion());
+        } catch (SchedulerException e) {
+            throw new ErrorResultException("Failed to schedule publish extension version job", e);
+        }
+
         var json = toExtensionVersionJson(extVersion, null, true);
         json.success = "It can take a couple minutes before the extension version is available";
 
@@ -481,7 +534,6 @@ public class LocalRegistryService implements IExtensionRegistry {
         if(sameVersions.stream().anyMatch(ev -> ev.isPreRelease() != extVersion.isPreRelease())) {
             var existingRelease = extVersion.isPreRelease() ? "stable release" : "pre-release";
             var thisRelease = extVersion.isPreRelease() ? "pre-release" : "stable release";
-            var extension = extVersion.getExtension();
             var semver = extVersion.getSemanticVersion();
             var newVersion = String.join(".", String.valueOf(semver.getMajor()), String.valueOf(semver.getMinor() + 1), "0");
 

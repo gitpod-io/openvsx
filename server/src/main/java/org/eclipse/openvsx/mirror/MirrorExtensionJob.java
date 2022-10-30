@@ -75,7 +75,7 @@ public class MirrorExtensionJob implements Job {
                 ? extension.getVersions()
                 : Collections.<ExtensionVersion>emptyList();
 
-        JobKey prevPublishExtensionVersionJobKey = null;
+        JobKey prevMirrorExtensionVersionJobKey = null;
         var mirrorUser = repositories.findUserByLoginName(null, userName);
         for(var targetPlatform : TargetPlatform.TARGET_PLATFORM_NAMES) {
             var targetVersions = extVersions.stream()
@@ -100,9 +100,9 @@ public class MirrorExtensionJob implements Job {
                 for (var extensionJson : toAdd) {
                     var mirrorExtensionVersionJobKey = schedulerService.mirrorExtensionVersion(extensionJson);
                     // TODO: cleanup mirrorExtensionVersionJobKey if prevPublishExtensionVersionJobKey fails but after retries
-                    schedulerService.tryChainMirrorJobs(prevPublishExtensionVersionJobKey, mirrorExtensionVersionJobKey);
+                    schedulerService.tryChainMirrorJobs(prevMirrorExtensionVersionJobKey, mirrorExtensionVersionJobKey);
 
-                    prevPublishExtensionVersionJobKey = schedulerService.generatePublishExtensionVersionJobKey(namespaceName, extensionName, targetPlatform, extensionJson.version);
+                    prevMirrorExtensionVersionJobKey = mirrorExtensionVersionJobKey;
                 }
             } catch (SchedulerException e) {
                 throw new RuntimeException(e);
@@ -115,10 +115,10 @@ public class MirrorExtensionJob implements Job {
             var mirrorActivateExtensionJobKey = schedulerService.mirrorActivateExtension(namespaceName, extensionName, lastModified);
             if(extension == null) {
                 var mirrorExtensionMetadataJobKey = schedulerService.mirrorExtensionMetadata(namespaceName, extensionName, lastModified);
-                schedulerService.tryChainMirrorJobs(prevPublishExtensionVersionJobKey, mirrorExtensionMetadataJobKey);
+                schedulerService.tryChainMirrorJobs(prevMirrorExtensionVersionJobKey, mirrorExtensionMetadataJobKey);
                 schedulerService.tryChainMirrorJobs(mirrorExtensionMetadataJobKey, mirrorActivateExtensionJobKey);
             } else {
-                schedulerService.tryChainMirrorJobs(prevPublishExtensionVersionJobKey, mirrorActivateExtensionJobKey);
+                schedulerService.tryChainMirrorJobs(prevMirrorExtensionVersionJobKey, mirrorActivateExtensionJobKey);
             }
 
             var mirrorNamespaceVerifiedJobKey = schedulerService.mirrorNamespaceVerified(namespaceName, lastModified);
