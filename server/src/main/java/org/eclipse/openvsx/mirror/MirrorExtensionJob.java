@@ -9,7 +9,15 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.mirror;
 
-import org.eclipse.openvsx.*;
+import static org.eclipse.openvsx.schedule.JobUtil.completed;
+import static org.eclipse.openvsx.schedule.JobUtil.starting;
+
+import java.util.Collections;
+import java.util.stream.Collectors;
+
+import org.eclipse.openvsx.AdminService;
+import org.eclipse.openvsx.ExtensionService;
+import org.eclipse.openvsx.IExtensionRegistry;
 import org.eclipse.openvsx.entities.ExtensionVersion;
 import org.eclipse.openvsx.entities.UserData;
 import org.eclipse.openvsx.json.NamespaceJson;
@@ -17,22 +25,18 @@ import org.eclipse.openvsx.repositories.RepositoryService;
 import org.eclipse.openvsx.schedule.SchedulerService;
 import org.eclipse.openvsx.util.NotFoundException;
 import org.eclipse.openvsx.util.TargetPlatform;
-import org.eclipse.openvsx.util.TimeUtil;
 import org.eclipse.openvsx.util.VersionAlias;
-import org.quartz.*;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
+import org.quartz.JobKey;
+import org.quartz.SchedulerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
 import io.micrometer.core.annotation.Timed;
-
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.stream.Collectors;
-
-import static org.eclipse.openvsx.schedule.JobUtil.completed;
-import static org.eclipse.openvsx.schedule.JobUtil.starting;
 
 public class MirrorExtensionJob implements Job {
 
@@ -55,6 +59,9 @@ public class MirrorExtensionJob implements Job {
 
     @Value("${ovsx.data.mirror.user-name}")
     String userName;
+
+    @Autowired
+    ExtensionService extensions;
 
     @Override
     @Timed(longTask = true)
@@ -93,15 +100,22 @@ public class MirrorExtensionJob implements Job {
 
                 var toAdd = versions.stream()
                         .filter(version -> targetVersions.stream().noneMatch(extVersion -> extVersion.getVersion().equals(version)))
-                        .map(version -> mirror.getExtension(namespaceName, extensionName, targetPlatform, version))
-                        .sorted(Comparator.comparing(extensionJson -> TimeUtil.fromUTCString(extensionJson.timestamp)))
                         .collect(Collectors.toList());
 
-                for (var extensionJson : toAdd) {
-                    var mirrorExtensionVersionJobKey = schedulerService.mirrorExtensionVersion(extensionJson);
+                if (toAdd.size() == 0) {
+                    continue;
+                }
+
+                // create extension before version jobs start, to make sure extension is created with correct name
+                // otherwise, mirrorExtensionVersion will create extension with data from .vsix file
+                extensions.findOrCreateExtension(json.namespace, json.name);
+
+                for (int i = toAdd.size() - 1; i >= 0; i--) {
+                    var version = toAdd.get(i);
+                    var mirrorExtensionVersionJobKey = schedulerService.mirrorExtensionVersion(namespaceName, extensionName, version, targetPlatform);
                     // TODO: cleanup mirrorExtensionVersionJobKey if prevPublishExtensionVersionJobKey fails but after retries
                     schedulerService.tryChainMirrorJobs(prevMirrorExtensionVersionJobKey, mirrorExtensionVersionJobKey);
-
+                    
                     prevMirrorExtensionVersionJobKey = mirrorExtensionVersionJobKey;
                 }
             } catch (SchedulerException e) {

@@ -126,6 +126,7 @@ public class ExtensionService {
         }
     }
 
+    @Transactional(TxType.REQUIRED)
     private ExtensionVersion createExtensionVersion(ExtensionProcessor processor, UserData user, PersonalAccessToken token) {
         var namespaceName = processor.getNamespace();
         var namespace = repositories.findNamespace(namespaceName);
@@ -137,33 +138,16 @@ public class ExtensionService {
             throw new ErrorResultException("Insufficient access rights for publisher: " + namespace.getName());
         }
 
-        var extensionName = processor.getExtensionName();
-        var nameIssue = validator.validateExtensionName(extensionName);
-        if (nameIssue.isPresent()) {
-            throw new ErrorResultException(nameIssue.get().toString());
-        }
-
+        var extension = findOrCreateExtension(processor.getNamespace(), processor.getExtensionName());
         var timestamp = TimeUtil.getCurrentUTC();
-        var extension = repositories.findExtension(extensionName, namespace);
-        if (extension == null) {
-            extension = new Extension();
-            extension.setActive(false);
-            extension.setName(extensionName);
-            extension.setNamespace(namespace);
-            extension.setPublishedDate(timestamp);
-
-            vsCodeIdService.createPublicId(extension);
-            entityManager.persist(extension);
-        } else {
-            var existingVersion = repositories.findVersion(processor.getVersion(), processor.getTargetPlatform(), extension);
-            if (existingVersion != null) {
-                throw new ErrorResultException(
-                        "Extension " + namespace.getName() + "." + extension.getName()
-                        + " " + processor.getVersion()
-                        + (TargetPlatform.isUniversal(processor.getTargetPlatform()) ? "" : " (" + processor.getTargetPlatform() + ")")
-                        + " is already published"
-                        + (existingVersion.isActive() ? "." : ", but is currently inactive and therefore not visible."));
-            }
+        var existingVersion = repositories.findVersion(processor.getVersion(), processor.getTargetPlatform(), extension);
+        if (existingVersion != null) {
+            throw new ErrorResultException(
+                    "Extension " + namespace.getName() + "." + extension.getName()
+                    + " " + processor.getVersion()
+                    + (TargetPlatform.isUniversal(processor.getTargetPlatform()) ? "" : " (" + processor.getTargetPlatform() + ")")
+                    + " is already published"
+                    + (existingVersion.isActive() ? "." : ", but is currently inactive and therefore not visible."));
         }
 
         var extVersion = processor.toExtensionVersion(extension);
@@ -188,6 +172,35 @@ public class ExtensionService {
 
         entityManager.persist(extVersion);
         return extVersion;
+    }
+
+    @Transactional(TxType.REQUIRED)
+    public Extension findOrCreateExtension(String namespaceName, String extensionName) {
+        var namespace = repositories.findNamespace(namespaceName);
+        if (namespace == null) {
+            throw new ErrorResultException("Unknown namespace: " + namespaceName
+                    + "\nUse the 'create-namespace' command to create a namespace corresponding to your publisher name.");
+        }
+
+        var nameIssue = validator.validateExtensionName(extensionName);
+        if (nameIssue.isPresent()) {
+            throw new ErrorResultException(nameIssue.get().toString());
+        }
+
+        var timestamp = TimeUtil.getCurrentUTC();
+        var extension = repositories.findExtension(extensionName, namespace);
+        if (extension == null) {
+            extension = new Extension();
+            extension.setActive(false);
+            extension.setName(extensionName);
+            extension.setNamespace(namespace);
+            extension.setPublishedDate(timestamp);
+
+            vsCodeIdService.createPublicId(extension);
+            entityManager.persist(extension);
+        }
+        
+        return extension;
     }
 
     private String checkDependency(String dependency) {

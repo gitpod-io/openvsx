@@ -170,20 +170,17 @@ public class SchedulerService {
         enqueueJob(job);
     }
 
-    public JobKey mirrorExtensionVersion(ExtensionJson json) throws SchedulerException {
-        var jobId = "MirrorExtensionVersion::" + json.namespace + "." + json.name + "-" + json.version + "@" + json.targetPlatform;
+    public JobKey mirrorExtensionVersion(String namespace, String name, String version, String targetPlatform) throws SchedulerException {
+        var jobId = "MirrorExtensionVersion::" + namespace + "." + name + "-" + version + "@" + targetPlatform;
         var jobKey = new JobKey(jobId, JobUtil.Groups.MIRROR);
         if (scheduler.getJobDetail(jobKey) == null) {
             var job = setRetryData(newJob(MirrorExtensionVersionJob.class), 10)
                     .withIdentity(jobKey)
                     .withDescription("Mirror Extension Version")
-                    .usingJobData("download", json.files.get("download"))
-                    .usingJobData("userProvider", json.publishedBy.provider)
-                    .usingJobData("userLoginName", json.publishedBy.loginName)
-                    .usingJobData("userFullName", json.publishedBy.fullName)
-                    .usingJobData("userAvatarUrl", json.publishedBy.avatarUrl)
-                    .usingJobData("userHomepage", json.publishedBy.homepage)
-                    .usingJobData("namespace", json.namespace)
+                    .usingJobData("namespace", namespace)
+                    .usingJobData("name", name)
+                    .usingJobData("version", version)
+                    .usingJobData("targetPlatform", targetPlatform)
                     .storeDurably()
                     .build();
 

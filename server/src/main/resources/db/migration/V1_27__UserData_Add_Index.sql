@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX unique_user_data ON user_data(login_name, provider);

@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.eclipse.openvsx.ExtensionService;
+import org.eclipse.openvsx.IExtensionRegistry;
 import org.eclipse.openvsx.LocalRegistryService;
 import org.eclipse.openvsx.UserService;
 import org.eclipse.openvsx.entities.ExtensionVersion;
@@ -48,6 +49,9 @@ public class MirrorExtensionVersionJob implements Job {
     RestTemplate nonRedirectingRestTemplate;
 
     @Autowired
+    IExtensionRegistry mirror;
+
+    @Autowired
     DataMirrorService data;
 
     @Autowired
@@ -67,14 +71,21 @@ public class MirrorExtensionVersionJob implements Job {
     public void execute(JobExecutionContext context) throws JobExecutionException {
         starting(context, logger);
         var map = context.getMergedJobDataMap();
-        var download = map.getString("download");
-        var userJson = new UserJson();
-        userJson.provider = map.getString("userProvider");
-        userJson.loginName = map.getString("userLoginName");
-        userJson.fullName = map.getString("userFullName");
-        userJson.avatarUrl = map.getString("userAvatarUrl");
-        userJson.homepage = map.getString("userHomepage");
         var namespaceName = map.getString("namespace");
+        var name = map.getString("name");
+        var version = map.getString("version");
+        var targetPlatform = map.getString("targetPlatform");
+
+        var extension = mirror.getExtension(namespaceName, name, targetPlatform, version);
+
+        var download = extension.files.get("download");
+        
+        var userJson = new UserJson();
+        userJson.provider = extension.publishedBy.provider;
+        userJson.loginName = extension.publishedBy.loginName;
+        userJson.fullName = extension.publishedBy.fullName;
+        userJson.avatarUrl = extension.publishedBy.avatarUrl;
+        userJson.homepage = extension.publishedBy.homepage;
 
         var vsixResourceHeaders = nonRedirectingRestTemplate.headForHeaders(download);
         var vsixLocation = vsixResourceHeaders.getLocation();
