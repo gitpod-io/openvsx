@@ -9,16 +9,15 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.mirror;
 
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.filter.OncePerRequestFilter;
+import java.util.Arrays;
+import java.util.List;
 
 import javax.servlet.FilterChain;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 public class ReadOnlyRequestFilter extends OncePerRequestFilter {
 

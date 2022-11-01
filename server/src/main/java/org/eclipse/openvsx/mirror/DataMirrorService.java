@@ -120,17 +120,6 @@ public class DataMirrorService {
     }
 
     @Transactional
-    public Extension getDeactivatedExtension(String extensionName, String namespaceName) {
-        var extension = repositories.findExtension(extensionName, namespaceName);
-        if(extension != null) {
-            extension.getVersions().forEach(extVersion -> extVersion.setActive(false));
-            extensions.updateExtension(extension);
-        }
-
-        return extension;
-    }
-
-    @Transactional
     public void activateExtension(String namespaceName, String extensionName) {
         var extension = repositories.findExtension(extensionName, namespaceName);
         extension.getVersions().stream().filter(this::canGetVsix).forEach(extVersion -> extVersion.setActive(true));

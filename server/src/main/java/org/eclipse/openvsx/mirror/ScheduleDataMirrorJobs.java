@@ -26,11 +26,8 @@ public class ScheduleDataMirrorJobs {
     @Autowired(required = false)
     DataMirrorService data;
 
-    @Value("${ovsx.data.mirror.schedule.extensions:}")
-    String extensionsSchedule;
-
-    @Value("${ovsx.data.mirror.schedule.metadata:}")
-    String metadataSchedule;
+    @Value("${ovsx.data.mirror.schedule:}")
+    String schedule;
 
     @Value("${ovsx.data.mirror.enabled:false}")
     boolean enabled;
@@ -43,11 +40,8 @@ public class ScheduleDataMirrorJobs {
         try {
             if(enabled) {
                 data.createMirrorUser(userName);
-                if(!extensionsSchedule.isEmpty()) {
-                    schedulerService.mirrorSitemap(extensionsSchedule);
-                }
-                if(!metadataSchedule.isEmpty()) {
-                    schedulerService.mirrorMetadata(metadataSchedule);
+                if(!schedule.isEmpty()) {
+                    schedulerService.scheduleDataMirror(schedule);
                 }
             } else {
                 schedulerService.unscheduleMirrorJobs();
