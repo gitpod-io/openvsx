@@ -15,30 +15,30 @@ import java.util.Map;
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 
+import org.eclipse.openvsx.AdminService;
 import org.eclipse.openvsx.ExtensionService;
 import org.eclipse.openvsx.IExtensionRegistry;
+import org.eclipse.openvsx.LocalRegistryService;
 import org.eclipse.openvsx.UserService;
 import org.eclipse.openvsx.entities.Extension;
 import org.eclipse.openvsx.entities.ExtensionReview;
 import org.eclipse.openvsx.entities.ExtensionVersion;
 import org.eclipse.openvsx.entities.FileResource;
+import org.eclipse.openvsx.entities.Namespace;
+import org.eclipse.openvsx.entities.NamespaceMembership;
 import org.eclipse.openvsx.entities.PersonalAccessToken;
 import org.eclipse.openvsx.entities.UserData;
+import org.eclipse.openvsx.json.NamespaceJson;
 import org.eclipse.openvsx.json.ReviewJson;
 import org.eclipse.openvsx.json.UserJson;
 import org.eclipse.openvsx.repositories.RepositoryService;
-import org.eclipse.openvsx.storage.StorageUtilService;
 import org.eclipse.openvsx.util.TimeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 
 @Component
 @ConditionalOnProperty(value = "ovsx.data.mirror.enabled", havingValue = "true")
@@ -59,19 +59,37 @@ public class DataMirrorService {
     ExtensionService extensions;
 
     @Autowired
-    StorageUtilService storageUtil;
-
-    @Autowired
-    RestTemplate contentRestTemplate;
-
-    @Autowired
     IExtensionRegistry mirror;
 
+    @Autowired
+    LocalRegistryService local;
+
+    @Value("${ovsx.data.mirror.user-name}")
+    String userName;
+
+    @Value("${ovsx.data.mirror.schedule}")
+    String schedule;
+
+    @Autowired
+    AdminService admin;
+
+    public String getSchedule() {
+        return schedule;
+    }
+
+    public String getUserName() {
+        return schedule;
+    }
+
+    public IExtensionRegistry getMirror() {
+        return mirror;
+    }
+
     @Transactional
-    public void createMirrorUser(String loginName) {
-        if(repositories.findUserByLoginName(null, loginName) == null) {
+    public void createMirrorUser() {
+        if(repositories.findUserByLoginName(null, userName) == null) {
             var user = new UserData();
-            user.setLoginName(loginName);
+            user.setLoginName(userName);
             entityManager.persist(user);
         }
     }
@@ -122,28 +140,8 @@ public class DataMirrorService {
     @Transactional
     public void activateExtension(String namespaceName, String extensionName) {
         var extension = repositories.findExtension(extensionName, namespaceName);
-        extension.getVersions().stream().filter(this::canGetVsix).forEach(extVersion -> extVersion.setActive(true));
+        extension.getVersions().stream().forEach(extVersion -> extVersion.setActive(true));
         extensions.updateExtension(extension);
-    }
-
-    private boolean canGetVsix(ExtensionVersion extVersion) {
-        var resource = repositories.findFileByType(extVersion, FileResource.DOWNLOAD);
-        if (resource == null){
-            return false;
-        }
-
-        var url = storageUtil.getLocation(resource);
-        try {
-            contentRestTemplate.exchange("{canGetVsixUri}", HttpMethod.HEAD, null, byte[].class, Map.of("canGetVsixUri", url));
-        } catch(HttpClientErrorException | HttpServerErrorException exc) {
-            logger.error(exc.getStatusCode().value() + " " + exc.getStatusCode().name() + " - " + url);
-            return false;
-        } catch(RestClientException exc) {
-            logger.error("HEAD " + url, exc);
-            return false;
-        }
-
-        return true;
     }
 
     @Transactional
@@ -182,5 +180,48 @@ public class DataMirrorService {
         review.setComment(json.comment);
         review.setRating(json.rating);
         entityManager.persist(review);
+    }
+
+    public void deleteExtensionVersion(ExtensionVersion extVersion, UserData user) {
+        var extension = extVersion.getExtension();
+        admin.deleteExtension(
+                extension.getNamespace().getName(),
+                extension.getName(),
+                extVersion.getTargetPlatform(),
+                extVersion.getVersion(),
+                user
+        );
+    }
+
+    public void mirrorNamespaceVerified(String namespaceName) {
+        var remoteVerified = mirror.getNamespace(namespaceName).verified;
+        var localVerified = local.getNamespace(namespaceName).verified;
+        if(!localVerified && remoteVerified) {
+            // verify the namespace by adding an owner to it
+            var namespace = repositories.findNamespace(namespaceName);
+            var memberships = repositories.findMemberships(namespace);
+            users.addNamespaceMember(namespace, memberships.toList().get(0).getUser(), NamespaceMembership.ROLE_OWNER);
+        }
+        if(localVerified && !remoteVerified) {
+            // unverify namespace by changing owner(s) back to contributor
+            var namespace = repositories.findNamespace(namespaceName);
+            repositories.findMemberships(namespace, NamespaceMembership.ROLE_OWNER)
+                    .forEach(membership -> users.addNamespaceMember(namespace, membership.getUser(), NamespaceMembership.ROLE_CONTRIBUTOR));
+        }
+    }
+
+    public void ensureNamespaceMembership(UserData user, Namespace namespace) {
+        var membership = repositories.findMembership(user, namespace);
+        if (membership == null) {
+            users.addNamespaceMember(namespace, user, NamespaceMembership.ROLE_CONTRIBUTOR);
+        }
+    }
+
+    public void ensureNamespace(String namespaceName) {
+        if(repositories.findNamespace(namespaceName) == null) {
+            var json = new NamespaceJson();
+            json.name = namespaceName;
+            admin.createNamespace(json);
+        }
     }
 }

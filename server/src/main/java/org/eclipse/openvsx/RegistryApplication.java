@@ -72,11 +72,24 @@ public class RegistryApplication {
             .build();
     }
 
+    @Bean
+    public RestTemplate nonRedirectingRestTemplate(RestTemplateBuilder builder) {
+        return builder
+            .setConnectTimeout(Duration.ofSeconds(10))
+            .setReadTimeout(Duration.ofSeconds(10))
+            .requestFactory(() -> new SimpleClientHttpRequestFactory() {
+                @Override
+                protected void prepareConnection(HttpURLConnection connection, String httpMethod) {
+                    connection.setInstanceFollowRedirects(false);
+                }})
+            .build();
+    }
+
 	@Bean
 	public RestTemplate contentRestTemplate(RestTemplateBuilder builder) {
         DefaultUriBuilderFactory defaultUriBuilderFactory = new DefaultUriBuilderFactory();
         defaultUriBuilderFactory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.NONE);
-        var template = builder
+        return builder
             .uriTemplateHandler(defaultUriBuilderFactory)
             .setConnectTimeout(Duration.ofSeconds(30))
             .setReadTimeout(Duration.ofMinutes(5))
@@ -85,12 +98,14 @@ public class RegistryApplication {
                 new StringHttpMessageConverter(),
                 new MappingJackson2HttpMessageConverter())
             .build();
-        return template;
     }
 
-    @Bean
-    public RestTemplate nonRedirectingRestTemplate(RestTemplateBuilder builder) {
+	@Bean
+	public RestTemplate contentNonRedirectingRestTemplate(RestTemplateBuilder builder) {
+        DefaultUriBuilderFactory defaultUriBuilderFactory = new DefaultUriBuilderFactory();
+        defaultUriBuilderFactory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.NONE);
         return builder
+            .uriTemplateHandler(defaultUriBuilderFactory)
             .setConnectTimeout(Duration.ofSeconds(10))
             .setReadTimeout(Duration.ofSeconds(10))
             .requestFactory(() -> new SimpleClientHttpRequestFactory() {

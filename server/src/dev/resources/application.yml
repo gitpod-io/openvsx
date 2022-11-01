@@ -11,6 +11,10 @@ spring:
     url: jdbc:postgresql://localhost:5432/postgres
     username: gitpod
     password: gitpod
+  flyway:
+    baseline-on-migrate: true
+    baseline-version: 0.1.0
+    baseline-description: JobRunr tables
   jpa:
     open-in-view: false
     properties:
@@ -18,32 +22,6 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: none
-  quartz:
-    job-store-type: jdbc
-    jdbc:
-      initialize-schema: never
-    properties:
-      org:
-        quartz:
-          scheduler:
-            instanceId: AUTO
-          threadPool:
-            class: org.quartz.simpl.SimpleThreadPool
-            threadCount: 2
-          jobStore:
-            class: org.quartz.impl.jdbcjobstore.JobStoreTX
-            driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
-            isClustered: true
-            clusterCheckinInterval: 20000
-            dataSource: postgres
-          dataSource:
-            postgres:
-              driver: org.postgresql.Driver
-              URL: ${spring.datasource.url}
-              user: ${spring.datasource.username}
-              password: ${spring.datasource.password}
-              provider: hikaricp
-
   session:
     store-type: jdbc
     jdbc:
@@ -76,7 +54,6 @@ management:
           - health
           - metrics
           - prometheus
-          - quartz
 
 springdoc:
   swagger-ui:
@@ -84,6 +61,20 @@ springdoc:
     operationsSorter: alpha
     supportedSubmitMethods:
       - get
+
+org:
+  jobrunr:
+    job-scheduler:
+      enabled: true
+    background-job-server:
+      enabled: true
+      worker-count: 20
+    dashboard:
+      enabled: true
+    miscellaneous:
+      allow-anonymous-data-usage: false
+    database:
+      type: sql
 
 bucket4j:
   enabled: true

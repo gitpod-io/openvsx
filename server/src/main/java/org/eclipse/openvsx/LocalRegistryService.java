@@ -20,6 +20,7 @@ import static org.eclipse.openvsx.entities.FileResource.README;
 import static org.eclipse.openvsx.util.UrlUtil.createApiUrl;
 
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -60,8 +62,8 @@ import org.eclipse.openvsx.json.ReviewJson;
 import org.eclipse.openvsx.json.ReviewListJson;
 import org.eclipse.openvsx.json.SearchEntryJson;
 import org.eclipse.openvsx.json.SearchResultJson;
+import org.eclipse.openvsx.publish.PublishExtensionVersionJobRequest;
 import org.eclipse.openvsx.repositories.RepositoryService;
-import org.eclipse.openvsx.schedule.SchedulerService;
 import org.eclipse.openvsx.search.ExtensionSearch;
 import org.eclipse.openvsx.search.ISearchService;
 import org.eclipse.openvsx.search.SearchUtilService;
@@ -74,7 +76,7 @@ import org.eclipse.openvsx.util.TimeUtil;
 import org.eclipse.openvsx.util.UrlUtil;
 import org.eclipse.openvsx.util.VersionAlias;
 import org.eclipse.openvsx.util.VersionService;
-import org.quartz.SchedulerException;
+import org.jobrunr.scheduling.JobRequestScheduler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -124,7 +126,7 @@ public class LocalRegistryService implements IExtensionRegistry {
     CacheService cache;
 
     @Autowired
-    SchedulerService schedulerService;
+    JobRequestScheduler scheduler;
 
     @Override
     public NamespaceJson getNamespace(String namespaceName) {
@@ -522,8 +524,13 @@ public class LocalRegistryService implements IExtensionRegistry {
 
         var extension = extVersion.getExtension();
         try {
-            schedulerService.publishExtensionVersion(extension.getNamespace().getName(), extension.getName(), extVersion.getTargetPlatform(), extVersion.getVersion());
-        } catch (SchedulerException e) {
+            var namespace = extension.getNamespace();
+            var identifier = namespace.getName() + "." + extension.getName() + "-" + extVersion.getVersion();
+            var jobIdText = "PublishExtensionVersion::" + identifier;
+            var jobId = UUID.nameUUIDFromBytes(jobIdText.getBytes(StandardCharsets.UTF_8));
+            scheduler.enqueue(jobId, new PublishExtensionVersionJobRequest(namespace.getName(), extension.getName(),
+                    extVersion.getTargetPlatform(), extVersion.getVersion()));
+        } catch (Throwable e) {
             throw new ErrorResultException("Failed to schedule publish extension version job", e);
         }
 

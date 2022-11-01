@@ -152,13 +152,8 @@ public class Extension extends TableImpl<ExtensionRecord> {
         return Arrays.<ForeignKey<ExtensionRecord, ?>>asList(Keys.EXTENSION__FK64IMD3NRJ67D50TPKJS94NGMN);
     }
 
-    private transient Namespace _namespace;
-
     public Namespace namespace() {
-        if (_namespace == null)
-            _namespace = new Namespace(this, Keys.EXTENSION__FK64IMD3NRJ67D50TPKJS94NGMN);
-
-        return _namespace;
+        return new Namespace(this, Keys.EXTENSION__FK64IMD3NRJ67D50TPKJS94NGMN);
     }
 
     @Override

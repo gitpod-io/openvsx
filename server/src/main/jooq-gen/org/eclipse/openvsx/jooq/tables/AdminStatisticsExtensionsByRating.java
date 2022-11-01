@@ -103,13 +103,8 @@ public class AdminStatisticsExtensionsByRating extends TableImpl<AdminStatistics
         return Arrays.<ForeignKey<AdminStatisticsExtensionsByRatingRecord, ?>>asList(Keys.ADMIN_STATISTICS_EXTENSIONS_BY_RATING__ADMIN_STATISTICS_EXTENSIONS_BY_RATING_FKEY);
     }
 
-    private transient AdminStatistics _adminStatistics;
-
     public AdminStatistics adminStatistics() {
-        if (_adminStatistics == null)
-            _adminStatistics = new AdminStatistics(this, Keys.ADMIN_STATISTICS_EXTENSIONS_BY_RATING__ADMIN_STATISTICS_EXTENSIONS_BY_RATING_FKEY);
-
-        return _adminStatistics;
+        return new AdminStatistics(this, Keys.ADMIN_STATISTICS_EXTENSIONS_BY_RATING__ADMIN_STATISTICS_EXTENSIONS_BY_RATING_FKEY);
     }
 
     @Override

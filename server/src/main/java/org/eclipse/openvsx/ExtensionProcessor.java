@@ -84,6 +84,7 @@ public class ExtensionProcessor implements AutoCloseable {
                 throw new RuntimeException(exc);
             }
         }
+        // TODO(jp) delete temp file, otherwise we blow up the storage
     }
 
     private void readInputStream() {

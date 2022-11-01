@@ -9,39 +9,33 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.migration;
 
+import javax.transaction.Transactional;
+
 import org.eclipse.openvsx.repositories.RepositoryService;
-import org.eclipse.openvsx.schedule.SchedulerService;
-import org.quartz.SchedulerException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.eclipse.openvsx.schedule.Scheduler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import javax.transaction.Transactional;
-
 @Component
 public class ExtractResourcesMigration {
-
-    protected final Logger logger = LoggerFactory.getLogger(ExtractResourcesMigration.class);
 
     @Autowired
     RepositoryService repositories;
 
     @Autowired
-    SchedulerService schedulerService;
+    Scheduler scheduler;
 
     @EventListener
     @Transactional
+    
     public void enqueueJobs(ApplicationStartedEvent event) {
-        for(var resource : repositories.findNotMigratedResources().toList()) {
-            try {
-                schedulerService.extractResourcesMigration(resource.getId());
-                resource.setMigrationScheduled(true);
-            } catch (SchedulerException e) {
-                logger.error("Failed to schedule ExtractResourcesMigration", e);
-            }
-        }
+        repositories.findNotMigratedResources()
+                .forEach(item -> {
+                    var id = item.getId();
+                    scheduler.enqueueExtractResourcesMigration(id);
+                    item.setMigrationScheduled(true);
+                });
     }
 }

@@ -114,13 +114,8 @@ public class SpringSessionAttributes extends TableImpl<SpringSessionAttributesRe
         return Arrays.<ForeignKey<SpringSessionAttributesRecord, ?>>asList(Keys.SPRING_SESSION_ATTRIBUTES__SPRING_SESSION_ATTRIBUTES_FK);
     }
 
-    private transient SpringSession _springSession;
-
     public SpringSession springSession() {
-        if (_springSession == null)
-            _springSession = new SpringSession(this, Keys.SPRING_SESSION_ATTRIBUTES__SPRING_SESSION_ATTRIBUTES_FK);
-
-        return _springSession;
+        return new SpringSession(this, Keys.SPRING_SESSION_ATTRIBUTES__SPRING_SESSION_ATTRIBUTES_FK);
     }
 
     @Override

@@ -9,10 +9,8 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.mirror;
 
-import org.eclipse.openvsx.schedule.SchedulerService;
-import org.quartz.SchedulerException;
+import org.eclipse.openvsx.schedule.Scheduler;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -21,33 +19,18 @@ import org.springframework.stereotype.Component;
 public class ScheduleDataMirrorJobs {
 
     @Autowired
-    SchedulerService schedulerService;
+    Scheduler scheduler;
 
     @Autowired(required = false)
     DataMirrorService data;
 
-    @Value("${ovsx.data.mirror.schedule:}")
-    String schedule;
-
-    @Value("${ovsx.data.mirror.enabled:false}")
-    boolean enabled;
-
-    @Value("${ovsx.data.mirror.user-name:}")
-    String userName;
-
     @EventListener
     public void scheduleJobs(ApplicationStartedEvent event) {
-        try {
-            if(enabled) {
-                data.createMirrorUser(userName);
-                if(!schedule.isEmpty()) {
-                    schedulerService.scheduleDataMirror(schedule);
-                }
-            } else {
-                schedulerService.unscheduleMirrorJobs();
-            }
-        } catch (SchedulerException e) {
-            e.printStackTrace();
+        if(data != null) {
+            data.createMirrorUser();
+            scheduler.scheduleDataMirror(data.getSchedule());
+        } else {
+            scheduler.unscheduleDataMirror();
         }
     }
 }

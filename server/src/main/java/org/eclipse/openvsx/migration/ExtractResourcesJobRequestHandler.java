@@ -1,5 +1,5 @@
 /** ******************************************************************************
- * Copyright (c) 2022 Precies. Software Ltd and others
+ * Copyright (c) 2022 Precies. Software and others
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0 which is available at
@@ -9,6 +9,13 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.migration;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.Map;
+import java.util.function.Consumer;
+
+import javax.persistence.EntityManager;
+
 import org.eclipse.openvsx.ExtensionProcessor;
 import org.eclipse.openvsx.entities.ExtractResourcesMigrationItem;
 import org.eclipse.openvsx.entities.FileResource;
@@ -16,19 +23,22 @@ import org.eclipse.openvsx.repositories.RepositoryService;
 import org.eclipse.openvsx.storage.AzureBlobStorageService;
 import org.eclipse.openvsx.storage.GoogleCloudStorageService;
 import org.eclipse.openvsx.storage.IStorageService;
+import org.jobrunr.jobs.annotations.Job;
+import org.jobrunr.jobs.context.JobRunrDashboardLogger;
+import org.jobrunr.jobs.lambdas.JobRequestHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
-import javax.persistence.EntityManager;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.util.Map;
-import java.util.function.Consumer;
+import io.micrometer.core.annotation.Timed;
 
 @Component
-public class ExtractResourcesService {
+public class ExtractResourcesJobRequestHandler implements JobRequestHandler<ExtractResourcesJobRequest> {
+
+    protected final Logger logger = new JobRunrDashboardLogger(LoggerFactory.getLogger(ExtractResourcesJobRequestHandler.class));
 
     @Autowired
     EntityManager entityManager;
@@ -45,10 +55,14 @@ public class ExtractResourcesService {
     @Autowired
     GoogleCloudStorageService googleStorage;
 
+    @Override
     @Transactional(rollbackFor = Exception.class)
-    public void extractResources(long itemId) throws IOException {
-        var item = entityManager.find(ExtractResourcesMigrationItem.class, itemId);
+    @Job(name = "Extract resources from published extension version", retries = 3)
+    @Timed(longTask = true)
+    public void run(ExtractResourcesJobRequest jobRequest) throws Exception {
+        var item = entityManager.find(ExtractResourcesMigrationItem.class, jobRequest.getItemId());
         var extVersion = item.getExtension();
+        logger.info("Extracting resources for: {}.{}-{}", extVersion.getExtension().getNamespace().getName(), extVersion.getExtension().getName(), extVersion.getVersion());
         repositories.deleteFileResources(extVersion, "resource");
         var download = repositories.findFileByType(extVersion, FileResource.DOWNLOAD);
         processEachResource(download, (resource) -> {

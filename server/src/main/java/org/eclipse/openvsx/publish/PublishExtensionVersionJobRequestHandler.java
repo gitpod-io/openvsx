@@ -1,5 +1,5 @@
 /** ******************************************************************************
- * Copyright (c) 2022 Precies. Software Ltd and others
+ * Copyright (c) 2022 Precies. Software and others
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0 which is available at
@@ -9,11 +9,7 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.publish;
 
-import static org.eclipse.openvsx.entities.FileResource.DOWNLOAD;
-import static org.eclipse.openvsx.entities.FileResource.LICENSE;
-
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.util.List;
 
 import javax.persistence.EntityManager;
@@ -24,11 +20,14 @@ import org.eclipse.openvsx.ExtensionService;
 import org.eclipse.openvsx.entities.FileResource;
 import org.eclipse.openvsx.repositories.RepositoryService;
 import org.eclipse.openvsx.storage.StorageUtilService;
+import org.jobrunr.jobs.lambdas.JobRequestHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import io.micrometer.core.annotation.Timed;
+
 @Component
-public class PublishExtensionVersionService {
+public class PublishExtensionVersionJobRequestHandler implements JobRequestHandler<PublishExtensionVersionJobRequest> {
 
     @Autowired
     ExtensionService extensions;
@@ -42,16 +41,21 @@ public class PublishExtensionVersionService {
     @Autowired
     StorageUtilService storageUtil;
 
+    @Override
     @Transactional
-    public void publish(String namespaceName, String extensionName, String targetPlatform, String version) throws IOException {
-        var extVersion = repositories.findVersion(version, targetPlatform, extensionName, namespaceName);
+    @Timed(longTask = true)
+
+    public void run(PublishExtensionVersionJobRequest jobRequest) throws Exception {
+        var extVersion = repositories.findVersion(jobRequest.getVersion(), jobRequest.getTargetPlatform(),
+                jobRequest.getExtensionName(), jobRequest.getNamespaceName());
+
         var resources = repositories.findFiles(extVersion);
-        var download = resources.stream().filter(r -> r.getType().equals(DOWNLOAD)).findFirst().get();
+        var download = resources.stream().filter(r -> r.getType().equals(FileResource.DOWNLOAD)).findFirst().get();
         try(
                 var input = new ByteArrayInputStream(download.getContent());
                 var processor = new ExtensionProcessor(input)
         ) {
-            var otherResources = processor.getResources(extVersion, List.of(DOWNLOAD, LICENSE));
+            var otherResources = processor.getResources(extVersion, List.of(FileResource.DOWNLOAD, FileResource.LICENSE));
             otherResources.forEach(fr -> entityManager.persist(fr));
             resources = resources.and(otherResources);
         }

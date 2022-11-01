@@ -5,12 +5,10 @@ ovsx:
       server-url: https://open-vsx.org
       requests-per-second: 5
       user-name: mirror_user
-      schedule: '* * * * * ? *'
+      schedule: '0/5 * * * *'
       read-only:
         disallowed-methods: POST, PUT, PATCH, DELETE
         allowed-endpoints: /vscode/gallery/extensionquery, /admin/update-search-index, /api/-/query
       excluded-extensions:
         - vscode.*
         - redhat.vscode-yaml
-      include-extensions:
-        - arm.remote-build
