@@ -9,6 +9,13 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.mirror;
 
+import static org.eclipse.openvsx.schedule.JobUtil.completed;
+import static org.eclipse.openvsx.schedule.JobUtil.starting;
+
+import org.eclipse.openvsx.IExtensionRegistry;
+import org.eclipse.openvsx.repositories.RepositoryService;
+import org.eclipse.openvsx.util.NotFoundException;
+import org.eclipse.openvsx.util.TargetPlatform;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -18,9 +25,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.micrometer.core.annotation.Timed;
 
-import static org.eclipse.openvsx.schedule.JobUtil.completed;
-import static org.eclipse.openvsx.schedule.JobUtil.starting;
-
 public class MirrorActivateExtensionJob implements Job {
 
     protected final Logger logger = LoggerFactory.getLogger(MirrorActivateExtensionJob.class);
@@ -28,13 +32,34 @@ public class MirrorActivateExtensionJob implements Job {
     @Autowired
     DataMirrorService data;
 
+    @Autowired
+    RepositoryService repositories;
+
+    @Autowired
+    IExtensionRegistry mirror;
+
     @Override
     @Timed(longTask = true)
     public void execute(JobExecutionContext context) throws JobExecutionException {
         starting(context, logger);
-        var namespaceName = context.getMergedJobDataMap().getString("namespace");
-        var extensionName = context.getMergedJobDataMap().getString("extension");
-        data.activateExtension(namespaceName, extensionName);
+        var extensions = repositories.findAllInactiveExtensions().toList();
+        for (var extension : extensions) {
+            var dbTotal = repositories.countVersions(extension);
+            var namespace = extension.getNamespace().getName();
+            var name = extension.getName();
+            var total = 0;
+            for (var targetPlatform : TargetPlatform.TARGET_PLATFORM_NAMES) {
+                try {
+                    var json = mirror.getExtension(namespace, name, targetPlatform);
+                    total += json.allVersions.size() - 1; // Remove latest
+                } catch (NotFoundException e) {
+                    // combination of extension and target platform doesn't exist, try next
+                }
+            }
+            if (dbTotal >= total) {
+                data.activateExtension(namespace, name);
+            }
+        }
         completed(context, logger);
     }
 }

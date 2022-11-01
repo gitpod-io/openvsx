@@ -9,6 +9,9 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.mirror;
 
+import static org.eclipse.openvsx.schedule.JobUtil.completed;
+import static org.eclipse.openvsx.schedule.JobUtil.starting;
+
 import org.eclipse.openvsx.IExtensionRegistry;
 import org.eclipse.openvsx.LocalRegistryService;
 import org.eclipse.openvsx.UserService;
@@ -22,9 +25,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.micrometer.core.annotation.Timed;
-
-import static org.eclipse.openvsx.schedule.JobUtil.completed;
-import static org.eclipse.openvsx.schedule.JobUtil.starting;
 
 public class MirrorNamespaceVerifiedJob implements Job {
 
@@ -46,22 +46,24 @@ public class MirrorNamespaceVerifiedJob implements Job {
     @Timed(longTask = true)
     public void execute(JobExecutionContext context) throws JobExecutionException {
         starting(context, logger);
-        var namespaceName = context.getMergedJobDataMap().getString("namespace");
-        var remoteVerified = mirror.getNamespace(namespaceName).verified;
-        var localVerified = local.getNamespace(namespaceName).verified;
-        if(!localVerified && remoteVerified) {
-            // verify the namespace by adding an owner to it
-            var namespace = repositories.findNamespace(namespaceName);
-            var memberships = repositories.findMemberships(namespace);
-            users.addNamespaceMember(namespace, memberships.toList().get(0).getUser(), NamespaceMembership.ROLE_OWNER);
-        }
-        if(localVerified && !remoteVerified) {
-            // unverify namespace by changing owner(s) back to contributor
-            var namespace = repositories.findNamespace(namespaceName);
-            repositories.findMemberships(namespace, NamespaceMembership.ROLE_OWNER)
-                    .forEach(membership -> users.addNamespaceMember(namespace, membership.getUser(), NamespaceMembership.ROLE_CONTRIBUTOR));
-        }
-
+        var extensions = repositories.findRecentPublishedExtensions(2);
+        extensions.forEach(extension -> {
+            var namespaceName = extension.getNamespace().getName();
+            var remoteVerified = mirror.getNamespace(namespaceName).verified;
+            var localVerified = local.getNamespace(namespaceName).verified;
+            if(!localVerified && remoteVerified) {
+                // verify the namespace by adding an owner to it
+                var namespace = repositories.findNamespace(namespaceName);
+                var memberships = repositories.findMemberships(namespace);
+                users.addNamespaceMember(namespace, memberships.toList().get(0).getUser(), NamespaceMembership.ROLE_OWNER);
+            }
+            if(localVerified && !remoteVerified) {
+                // unverify namespace by changing owner(s) back to contributor
+                var namespace = repositories.findNamespace(namespaceName);
+                repositories.findMemberships(namespace, NamespaceMembership.ROLE_OWNER)
+                        .forEach(membership -> users.addNamespaceMember(namespace, membership.getUser(), NamespaceMembership.ROLE_CONTRIBUTOR));
+            }
+        });
         completed(context, logger);
     }
 }

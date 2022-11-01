@@ -6,8 +6,8 @@ ovsx:
       requests-per-second: 5
       user-name: mirror_user
       schedule:
-        extensions: '* * * * * ? *'
-        metadata: '* * * * * ? *'
+        extensions: '*/10 * * * * ? *'
+        metadata: '*/20 * * * * ? *'
       read-only:
         disallowed-methods: POST, PUT, PATCH, DELETE
         allowed-endpoints: /vscode/gallery/extensionquery, /admin/update-search-index, /api/-/query

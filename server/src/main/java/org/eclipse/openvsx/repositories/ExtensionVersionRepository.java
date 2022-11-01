@@ -9,17 +9,16 @@
  ********************************************************************************/
 package org.eclipse.openvsx.repositories;
 
-import org.eclipse.openvsx.entities.UserData;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.Repository;
-import org.springframework.data.util.Streamable;
-
 import java.time.LocalDateTime;
 import java.util.Collection;
 
 import org.eclipse.openvsx.entities.Extension;
 import org.eclipse.openvsx.entities.ExtensionVersion;
 import org.eclipse.openvsx.entities.PersonalAccessToken;
+import org.eclipse.openvsx.entities.UserData;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.Repository;
+import org.springframework.data.util.Streamable;
 
 public interface ExtensionVersionRepository extends Repository<ExtensionVersion, Long> {
 

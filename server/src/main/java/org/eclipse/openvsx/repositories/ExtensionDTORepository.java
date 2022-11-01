@@ -9,19 +9,22 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.repositories;
 
+import static org.eclipse.openvsx.jooq.Tables.EXTENSION;
+import static org.eclipse.openvsx.jooq.Tables.EXTENSION_REVIEW;
+import static org.eclipse.openvsx.jooq.Tables.NAMESPACE;
+
+import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.eclipse.openvsx.dto.ExtensionDTO;
 import org.jooq.DSLContext;
 import org.jooq.SelectConditionStep;
 import org.jooq.impl.DSL;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import static org.eclipse.openvsx.jooq.Tables.*;
 
 @Component
 public class ExtensionDTORepository {
@@ -47,6 +50,10 @@ public class ExtensionDTORepository {
                 .and(DSL.upper(EXTENSION.NAME).eq(DSL.upper(name)))
                 .and(DSL.upper(NAMESPACE.NAME).eq(DSL.upper(namespaceName)))
                 .fetchOneInto(ExtensionDTO.class);
+    }
+
+    public List<ExtensionDTO> findRecentPublishedExtensions(LocalDateTime endExclusive) {
+        return fetch(findAllActive().and(EXTENSION.PUBLISHED_DATE.gt(endExclusive)));
     }
 
     public Map<Long, Integer> findAllActiveReviewCountsById(Collection<Long> ids) {

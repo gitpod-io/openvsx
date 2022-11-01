@@ -9,18 +9,31 @@
  ********************************************************************************/
 package org.eclipse.openvsx.repositories;
 
-import org.eclipse.openvsx.dto.*;
-import org.eclipse.openvsx.entities.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.util.Streamable;
-import org.springframework.stereotype.Component;
+import static org.eclipse.openvsx.entities.FileResource.DOWNLOAD;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static org.eclipse.openvsx.entities.FileResource.DOWNLOAD;
+import org.eclipse.openvsx.dto.ExtensionDTO;
+import org.eclipse.openvsx.dto.ExtensionVersionDTO;
+import org.eclipse.openvsx.dto.FileResourceDTO;
+import org.eclipse.openvsx.dto.NamespaceMembershipDTO;
+import org.eclipse.openvsx.entities.AdminStatistics;
+import org.eclipse.openvsx.entities.Extension;
+import org.eclipse.openvsx.entities.ExtensionReview;
+import org.eclipse.openvsx.entities.ExtensionVersion;
+import org.eclipse.openvsx.entities.ExtractResourcesMigrationItem;
+import org.eclipse.openvsx.entities.FileResource;
+import org.eclipse.openvsx.entities.Namespace;
+import org.eclipse.openvsx.entities.NamespaceMembership;
+import org.eclipse.openvsx.entities.PersistedLog;
+import org.eclipse.openvsx.entities.PersonalAccessToken;
+import org.eclipse.openvsx.entities.UserData;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.util.Streamable;
+import org.springframework.stereotype.Component;
 
 @Component
 public class RepositoryService {
@@ -85,6 +98,10 @@ public class RepositoryService {
 
     public Streamable<Extension> findAllActiveExtensions() {
         return extensionRepo.findByActiveTrue();
+    }
+
+    public Streamable<Extension> findAllInactiveExtensions() {
+        return extensionRepo.findByActiveFalse();
     }
 
     public Streamable<Extension> findAllNotMatchingByExtensionId(List<String> extensionIds) {
@@ -272,6 +289,10 @@ public class RepositoryService {
 
     public ExtensionDTO findActiveExtensionDTO(String name, String namespaceName) {
         return extensionDTORepo.findActiveByNameIgnoreCaseAndNamespaceNameIgnoreCase(name, namespaceName);
+    }
+
+    public List<ExtensionDTO> findRecentPublishedExtensions(long days) {
+        return extensionDTORepo.findRecentPublishedExtensions(LocalDateTime.now().minusDays(days));
     }
 
     public List<ExtensionDTO> findAllActiveExtensionDTOsById(Collection<Long> ids) {

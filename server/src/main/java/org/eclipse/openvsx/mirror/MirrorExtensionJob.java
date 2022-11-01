@@ -29,7 +29,6 @@ import org.eclipse.openvsx.util.VersionAlias;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
-import org.quartz.JobKey;
 import org.quartz.SchedulerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,7 +69,6 @@ public class MirrorExtensionJob implements Job {
         var map = context.getMergedJobDataMap();
         var namespaceName = map.getString("namespace");
         var extensionName = map.getString("extension");
-        var lastModified = map.getString("lastModified");
         if(repositories.findNamespace(namespaceName) == null) {
             var json = new NamespaceJson();
             json.name = namespaceName;
@@ -82,7 +80,6 @@ public class MirrorExtensionJob implements Job {
                 ? extension.getVersions()
                 : Collections.<ExtensionVersion>emptyList();
 
-        JobKey prevMirrorExtensionVersionJobKey = null;
         var mirrorUser = repositories.findUserByLoginName(null, userName);
         for(var targetPlatform : TargetPlatform.TARGET_PLATFORM_NAMES) {
             var targetVersions = extVersions.stream()
@@ -112,33 +109,14 @@ public class MirrorExtensionJob implements Job {
 
                 for (int i = toAdd.size() - 1; i >= 0; i--) {
                     var version = toAdd.get(i);
-                    var mirrorExtensionVersionJobKey = schedulerService.mirrorExtensionVersion(namespaceName, extensionName, version, targetPlatform);
+                    schedulerService.mirrorExtensionVersion(namespaceName, extensionName, version, targetPlatform);
                     // TODO: cleanup mirrorExtensionVersionJobKey if prevPublishExtensionVersionJobKey fails but after retries
-                    schedulerService.tryChainMirrorJobs(prevMirrorExtensionVersionJobKey, mirrorExtensionVersionJobKey);
-                    
-                    prevMirrorExtensionVersionJobKey = mirrorExtensionVersionJobKey;
                 }
             } catch (SchedulerException e) {
                 throw new RuntimeException(e);
             } catch (NotFoundException e) {
                 // combination of extension and target platform doesn't exist, try next
             }
-        }
-
-        try {
-            var mirrorActivateExtensionJobKey = schedulerService.mirrorActivateExtension(namespaceName, extensionName, lastModified);
-            if(extension == null) {
-                var mirrorExtensionMetadataJobKey = schedulerService.mirrorExtensionMetadata(namespaceName, extensionName, lastModified);
-                schedulerService.tryChainMirrorJobs(prevMirrorExtensionVersionJobKey, mirrorExtensionMetadataJobKey);
-                schedulerService.tryChainMirrorJobs(mirrorExtensionMetadataJobKey, mirrorActivateExtensionJobKey);
-            } else {
-                schedulerService.tryChainMirrorJobs(prevMirrorExtensionVersionJobKey, mirrorActivateExtensionJobKey);
-            }
-
-            var mirrorNamespaceVerifiedJobKey = schedulerService.mirrorNamespaceVerified(namespaceName, lastModified);
-            schedulerService.tryChainMirrorJobs(mirrorActivateExtensionJobKey, mirrorNamespaceVerifiedJobKey);
-        } catch (SchedulerException e) {
-            throw new RuntimeException(e);
         }
 
         completed(context, logger);
