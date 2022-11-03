@@ -11,12 +11,9 @@ package org.eclipse.openvsx.adapter;
 
 import java.util.UUID;
 
-import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
-
+import org.eclipse.openvsx.UrlConfigService;
 import org.eclipse.openvsx.entities.Extension;
 import org.eclipse.openvsx.repositories.RepositoryService;
 import org.eclipse.openvsx.util.UrlUtil;
@@ -31,6 +28,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
+
 @Component
 public class VSCodeIdService {
 
@@ -42,10 +42,19 @@ public class VSCodeIdService {
     RestTemplate restTemplate;
 
     @Autowired
+    RestTemplate backgroundRestTemplate;
+
+    @Autowired
     RepositoryService repositories;
 
     @Value("${ovsx.vscode.upstream.gallery-url:}")
     String upstreamUrl;
+
+    @Value("${ovsx.data.mirror.enabled:false}")
+    boolean mirrorModeEnabled;
+
+    @Autowired
+    UrlConfigService urlConfigService;
 
     public boolean setPublicIds(Extension extension) {
         var updateExistingPublicIds = false;
@@ -88,16 +97,21 @@ public class VSCodeIdService {
     }
 
     private ExtensionQueryResult.Extension getUpstreamExtension(Extension extension) {
-        if (Strings.isNullOrEmpty(upstreamUrl)) {
+        String galleryUrl = upstreamUrl;
+        if (mirrorModeEnabled) {
+            galleryUrl = urlConfigService.getMirrorServerUrl() + "/vscode/gallery";
+        }
+        if (Strings.isNullOrEmpty(galleryUrl)) {
             return null;
         }
         try {
-            var requestUrl = UrlUtil.createApiUrl(upstreamUrl, "extensionquery");
+            var requestUrl = UrlUtil.createApiUrl(galleryUrl, "extensionquery");
             var requestData = createRequestData(extension);
             var headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set(HttpHeaders.ACCEPT, "application/json;api-version=" + API_VERSION);
-            var result = restTemplate.postForObject(requestUrl, new HttpEntity<>(requestData, headers), ExtensionQueryResult.class);
+            var template = mirrorModeEnabled ? backgroundRestTemplate : restTemplate;
+            var result = template.postForObject(requestUrl, new HttpEntity<>(requestData, headers), ExtensionQueryResult.class);
 
             if (result.results != null && result.results.size() > 0) {
                 var item = result.results.get(0);
@@ -106,6 +120,13 @@ public class VSCodeIdService {
                 }
             }
         } catch (RestClientException exc) {
+            if (mirrorModeEnabled) {
+                // This is critical in mirror mode so rethrow the error
+                throw exc;
+            }
+            // TODO: it most likely should fail if an error is not 404
+            // otherwise it can cause issues for some VS Code clients
+            // i.e. users switching between OpenVSX and MS marketplafe via User Data settings sync
             logger.error("Failed to query extension id from upstream URL", exc);
         }
         return null;
@@ -128,5 +149,5 @@ public class VSCodeIdService {
         request.filters = Lists.newArrayList(filter);
         return request;
     }
-    
+
 }

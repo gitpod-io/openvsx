@@ -9,24 +9,41 @@
  ********************************************************************************/
 package org.eclipse.openvsx.adapter;
 
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.eclipse.openvsx.mirror.DataMirrorService;
 import org.eclipse.openvsx.util.NotFoundException;
 import org.eclipse.openvsx.util.TargetPlatform;
 import org.eclipse.openvsx.util.UrlUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.ui.ModelMap;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 
-import javax.servlet.http.HttpServletRequest;
-import java.util.*;
-import java.util.stream.Collectors;
-
 @RestController
 public class VSCodeAPI {
+
+    protected final Logger logger = LoggerFactory.getLogger(VSCodeAPI.class);
 
     private static final int DEFAULT_PAGE_SIZE = 20;
 
@@ -35,6 +52,9 @@ public class VSCodeAPI {
 
     @Autowired
     UpstreamVSCodeService upstream;
+
+    @Autowired(required = false)
+    DataMirrorService dataMirror;
 
     private Iterable<IVSCodeService> getVSCodeServices() {
         var registries = new ArrayList<IVSCodeService>();
@@ -57,6 +77,28 @@ public class VSCodeAPI {
         }
         if(size <= 0) {
             size = DEFAULT_PAGE_SIZE;
+        }
+
+        if (dataMirror != null) {
+            if (upstream.isValid()) {
+                try {
+                    // we trust upstream to know about latest if we did not sync yet everything
+                    // for individual extensions, versions, assets we check another order first local and then upstream
+                    var result = upstream.extensionQuery(param, size);
+                    if (!dataMirror.needsMatch()) {
+                        return result;
+                    }
+                    return LocalVSCodeService.toQueryResult(result.results.get(0).extensions.stream().filter(e ->
+                        dataMirror.match(e.publisher.publisherName, e.extensionName)    
+                    ).collect(Collectors.toList()));
+                } catch (NotFoundException | ResponseStatusException exc) {
+                    // expected issues with upstream, try local
+                } catch (Throwable t) {
+                    // unexpected issues with uptstream, log and try local
+                    logger.error("vscode: mirror: failed to query upstream:", t);
+                }
+            }
+            return local.extensionQuery(param, size);
         }
 
         var totalCount = 0L;
@@ -94,6 +136,7 @@ public class VSCodeAPI {
             }
         }
 
+        // TODO can be replaced with LocalVSCodeService.toQueryResult
         var resultItem = new ExtensionQueryResult.ResultItem();
         resultItem.extensions = extensions;
         return toExtensionQueryResult(resultItem, totalCount);
@@ -155,6 +198,10 @@ public class VSCodeAPI {
             @PathVariable String version, @PathVariable String assetType,
             @RequestParam(defaultValue = TargetPlatform.NAME_UNIVERSAL) String targetPlatform
     ) {
+        if (dataMirror != null && !dataMirror.match(namespace, extensionName)) {
+            return ResponseEntity.notFound().build();    
+        }
+
         var restOfTheUrl = UrlUtil.extractWildcardPath(request);
         for (var service : getVSCodeServices()) {
             try {
@@ -177,6 +224,9 @@ public class VSCodeAPI {
 
         var namespace = itemName.substring(0, dotIndex);
         var extension = itemName.substring(dotIndex + 1);
+        if (dataMirror != null && !dataMirror.match(namespace, extension)) {
+            return new ModelAndView(null, HttpStatus.NOT_FOUND);
+        }
         for (var service : getVSCodeServices()) {
             try {
                 var itemUrl = service.getItemUrl(namespace, extension);
@@ -195,6 +245,10 @@ public class VSCodeAPI {
             @PathVariable String namespace, @PathVariable String extension, @PathVariable String version,
             @RequestParam(defaultValue = TargetPlatform.NAME_UNIVERSAL) String targetPlatform, ModelMap model
     ) {
+        if (dataMirror != null && !dataMirror.match(namespace, extension)) {
+            return new ModelAndView(null, HttpStatus.NOT_FOUND);
+        }
+
         for (var service : getVSCodeServices()) {
             try {
                 var downloadUrl = service.download(namespace, extension, version, targetPlatform);
@@ -215,6 +269,10 @@ public class VSCodeAPI {
             @PathVariable String extensionName,
             @PathVariable String version
     ) {
+        if (dataMirror != null && !dataMirror.match(namespaceName, extensionName)) {
+            return ResponseEntity.notFound().build();
+        }
+
         var path = UrlUtil.extractWildcardPath(request);
         for (var service : getVSCodeServices()) {
             try {

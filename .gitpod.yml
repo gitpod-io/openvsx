@@ -2,12 +2,14 @@ image:
   file: .gitpod.dockerfile
 
 ports:
-# Web UI (static resources)
 - port: 3000
-# Server (API, must be public for CORS)
+  name: Web UI
+  description: static resources
 - port: 8080
   visibility: public
   onOpen: ignore
+  name: Server
+  description: API, must be public for CORS
 # Test report
 - port: 8081
 # Java debugging

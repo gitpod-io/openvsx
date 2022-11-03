@@ -9,12 +9,15 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.storage;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.net.URI;
+
+import org.eclipse.openvsx.UrlConfigService;
 import org.eclipse.openvsx.entities.Extension;
 import org.eclipse.openvsx.entities.ExtensionVersion;
 import org.eclipse.openvsx.entities.FileResource;
 import org.eclipse.openvsx.entities.Namespace;
-import org.eclipse.openvsx.search.DatabaseSearchService;
-import org.eclipse.openvsx.search.RelevanceService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,9 +26,8 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import java.net.URI;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 @ExtendWith(SpringExtension.class)
 @MockBean({ StorageUtilService.class })
@@ -61,6 +63,16 @@ public class AzureBlobStorageServiceTest {
 
     @TestConfiguration
     static class TestConfig {
+        @Bean
+        public MeterRegistry registry() {
+            return new SimpleMeterRegistry();
+        }
+
+        @Bean
+        public UrlConfigService urlConfigService() {
+            return new UrlConfigService();
+        }
+        
         @Bean
         AzureBlobStorageService azureBlobStorageService() {
             return new AzureBlobStorageService();

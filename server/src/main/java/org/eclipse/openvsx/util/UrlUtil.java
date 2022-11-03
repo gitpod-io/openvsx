@@ -11,14 +11,12 @@ package org.eclipse.openvsx.util;
 
 import java.nio.charset.StandardCharsets;
 
-import java.util.ArrayList;
-import java.util.Collections;
-
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.eclipse.openvsx.entities.ExtensionVersion;
 import org.eclipse.openvsx.json.ExtensionJson;
+import org.springframework.http.HttpHeaders;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -137,12 +135,35 @@ public final class UrlUtil {
         return result.toString();
     }
 
+    public static HttpHeaders getForwardedHeaders() {
+        var headers = new  HttpHeaders();
+        try {
+            var requestAttrs = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
+            var request = requestAttrs.getRequest();
+
+            var it = request.getHeaderNames();
+            while (it.hasMoreElements()) {
+                var header = it.nextElement();
+                headers.add(header, request.getHeader(header));
+            }
+
+        } catch (IllegalStateException e) {
+        }
+        headers.remove(HttpHeaders.HOST);
+        return headers;
+    }
+
     /**
      * Get the base URL to use for API requests from the current servlet request.
      */
     public static String getBaseUrl() {
-        var requestAttrs = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
-        return getBaseUrl(requestAttrs.getRequest());
+        try {
+            var requestAttrs = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
+            return getBaseUrl(requestAttrs.getRequest());
+        } catch (IllegalStateException e) {
+            // method is called outside of web request context
+            return "";
+        }
     }
 
     protected static String getBaseUrl(HttpServletRequest request) {

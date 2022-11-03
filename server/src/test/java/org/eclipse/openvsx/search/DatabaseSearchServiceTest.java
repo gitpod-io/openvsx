@@ -16,14 +16,21 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.persistence.EntityManager;
+
+import org.eclipse.openvsx.UrlConfigService;
 import org.eclipse.openvsx.cache.LatestExtensionVersionCacheKeyGenerator;
-import org.eclipse.openvsx.entities.*;
+import org.eclipse.openvsx.entities.Extension;
+import org.eclipse.openvsx.entities.ExtensionVersion;
+import org.eclipse.openvsx.entities.Namespace;
+import org.eclipse.openvsx.entities.NamespaceMembership;
+import org.eclipse.openvsx.entities.PersonalAccessToken;
+import org.eclipse.openvsx.entities.UserData;
 import org.eclipse.openvsx.repositories.RepositoryService;
 import org.eclipse.openvsx.util.TargetPlatform;
 import org.eclipse.openvsx.util.VersionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -33,7 +40,8 @@ import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.util.Streamable;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import javax.persistence.EntityManager;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 @ExtendWith(SpringExtension.class)
 public class DatabaseSearchServiceTest {
@@ -341,6 +349,16 @@ public class DatabaseSearchServiceTest {
 
     @TestConfiguration
     static class TestConfig {
+        @Bean
+        public MeterRegistry registry() {
+            return new SimpleMeterRegistry();
+        }
+
+        @Bean
+        public UrlConfigService urlConfigService() {
+            return new UrlConfigService();
+        }
+        
         @Bean
         DatabaseSearchService searchService() {
             return new DatabaseSearchService();

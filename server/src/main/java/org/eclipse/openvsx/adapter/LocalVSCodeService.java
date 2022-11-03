@@ -8,10 +8,59 @@
  * SPDX-License-Identifier: EPL-2.0
  * ****************************************************************************** */
 package org.eclipse.openvsx.adapter;
+import static org.eclipse.openvsx.adapter.ExtensionQueryParam.FLAG_INCLUDE_ASSET_URI;
+import static org.eclipse.openvsx.adapter.ExtensionQueryParam.FLAG_INCLUDE_FILES;
+import static org.eclipse.openvsx.adapter.ExtensionQueryParam.FLAG_INCLUDE_LATEST_VERSION_ONLY;
+import static org.eclipse.openvsx.adapter.ExtensionQueryParam.FLAG_INCLUDE_STATISTICS;
+import static org.eclipse.openvsx.adapter.ExtensionQueryParam.FLAG_INCLUDE_VERSIONS;
+import static org.eclipse.openvsx.adapter.ExtensionQueryParam.FLAG_INCLUDE_VERSION_PROPERTIES;
+import static org.eclipse.openvsx.adapter.ExtensionQueryParam.Criterion.FILTER_CATEGORY;
+import static org.eclipse.openvsx.adapter.ExtensionQueryParam.Criterion.FILTER_EXTENSION_ID;
+import static org.eclipse.openvsx.adapter.ExtensionQueryParam.Criterion.FILTER_EXTENSION_NAME;
+import static org.eclipse.openvsx.adapter.ExtensionQueryParam.Criterion.FILTER_SEARCH_TEXT;
+import static org.eclipse.openvsx.adapter.ExtensionQueryParam.Criterion.FILTER_TAG;
+import static org.eclipse.openvsx.adapter.ExtensionQueryParam.Criterion.FILTER_TARGET;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.Extension.FLAG_PREVIEW;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.ExtensionFile.FILE_CHANGELOG;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.ExtensionFile.FILE_DETAILS;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.ExtensionFile.FILE_ICON;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.ExtensionFile.FILE_LICENSE;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.ExtensionFile.FILE_MANIFEST;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.ExtensionFile.FILE_VSIX;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.ExtensionFile.FILE_WEB_RESOURCES;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.Property.PROP_BRANDING_COLOR;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.Property.PROP_BRANDING_THEME;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.Property.PROP_DEPENDENCY;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.Property.PROP_ENGINE;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.Property.PROP_EXTENSION_PACK;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.Property.PROP_LOCALIZED_LANGUAGES;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.Property.PROP_PRE_RELEASE;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.Property.PROP_REPOSITORY;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.Property.PROP_WEB_EXTENSION;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.Statistic.STAT_AVERAGE_RATING;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.Statistic.STAT_INSTALL;
+import static org.eclipse.openvsx.adapter.ExtensionQueryResult.Statistic.STAT_RATING_COUNT;
+import static org.eclipse.openvsx.entities.FileResource.CHANGELOG;
+import static org.eclipse.openvsx.entities.FileResource.DOWNLOAD;
+import static org.eclipse.openvsx.entities.FileResource.ICON;
+import static org.eclipse.openvsx.entities.FileResource.LICENSE;
+import static org.eclipse.openvsx.entities.FileResource.MANIFEST;
+import static org.eclipse.openvsx.entities.FileResource.README;
+import static org.eclipse.openvsx.entities.FileResource.STORAGE_DB;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
 import org.eclipse.openvsx.entities.Extension;
 import org.eclipse.openvsx.entities.ExtensionVersion;
 import org.eclipse.openvsx.entities.FileResource;
@@ -19,27 +68,24 @@ import org.eclipse.openvsx.entities.Namespace;
 import org.eclipse.openvsx.repositories.RepositoryService;
 import org.eclipse.openvsx.search.SearchUtilService;
 import org.eclipse.openvsx.storage.StorageUtilService;
-import org.eclipse.openvsx.util.*;
+import org.eclipse.openvsx.util.ErrorResultException;
+import org.eclipse.openvsx.util.NotFoundException;
+import org.eclipse.openvsx.util.TargetPlatform;
+import org.eclipse.openvsx.util.TimeUtil;
+import org.eclipse.openvsx.util.UrlUtil;
+import org.eclipse.openvsx.util.VersionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import javax.transaction.Transactional;
-
-import static org.eclipse.openvsx.adapter.ExtensionQueryParam.Criterion.*;
-import static org.eclipse.openvsx.adapter.ExtensionQueryParam.*;
-import static org.eclipse.openvsx.adapter.ExtensionQueryResult.Extension.FLAG_PREVIEW;
-import static org.eclipse.openvsx.adapter.ExtensionQueryResult.ExtensionFile.*;
-import static org.eclipse.openvsx.adapter.ExtensionQueryResult.Property.*;
-import static org.eclipse.openvsx.adapter.ExtensionQueryResult.Statistic.*;
-import static org.eclipse.openvsx.entities.FileResource.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
 
 @Component
 public class LocalVSCodeService implements IVSCodeService {
@@ -60,6 +106,9 @@ public class LocalVSCodeService implements IVSCodeService {
 
     @Value("${ovsx.webui.url:}")
     String webuiUrl;
+
+    @Value("${ovsx.data.mirror.enabled:false}")
+    boolean mirrorModeEnabled;
 
     @Override
     public ExtensionQueryResult extensionQuery(ExtensionQueryParam param, int defaultPageSize) {
@@ -232,7 +281,11 @@ public class LocalVSCodeService implements IVSCodeService {
         return resource != null ? UrlUtil.createApiFileUrl(fileBaseUrl, resource.getName()) : null;
     }
 
-    private ExtensionQueryResult toQueryResult(List<ExtensionQueryResult.Extension> extensions, long totalCount) {
+    public static ExtensionQueryResult toQueryResult(List<ExtensionQueryResult.Extension> extensions) {
+        return toQueryResult(extensions, extensions.size());
+    }
+
+    public static ExtensionQueryResult toQueryResult(List<ExtensionQueryResult.Extension> extensions, long totalCount) {
         var resultItem = new ExtensionQueryResult.ResultItem();
         resultItem.extensions = extensions;
 
@@ -316,9 +369,19 @@ public class LocalVSCodeService implements IVSCodeService {
                         ? assetType.substring((FILE_WEB_RESOURCES.length()))
                         : null;
 
-                return name != null && name.startsWith("extension/") // is web resource
-                        ? repositories.findFileByTypeAndName(extVersion, FileResource.RESOURCE, name)
-                        : null;
+                // if it's web resource
+                if (name != null && name.startsWith("extension/")) {
+                    if (mirrorModeEnabled) {
+                        var resource =  new FileResource();
+                        resource.setExtension(extVersion);
+                        resource.setName(name);
+                        resource.setType(FileResource.RESOURCE);
+                        resource.setStorageType(storageUtil.getActiveStorageType());
+                        return resource;
+                    }
+                    return repositories.findFileByTypeAndName(extVersion, FileResource.RESOURCE, name);
+                }
+                return null;
             }
         }
     }
@@ -378,7 +441,7 @@ public class LocalVSCodeService implements IVSCodeService {
                 .orElse(null);
 
         if (extVersion == null) {
-            return ResponseEntity.notFound().build();
+            throw new NotFoundException();
         }
 
         var resources = repositories.findResourceFileResources(extVersion.getId(), path);
