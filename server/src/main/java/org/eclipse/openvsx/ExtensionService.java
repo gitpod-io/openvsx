@@ -14,23 +14,29 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
 
 import javax.transaction.Transactional;
 import javax.transaction.Transactional.TxType;
 
-import com.google.common.base.Strings;
-
 import org.eclipse.openvsx.cache.CacheService;
-import org.eclipse.openvsx.entities.*;
+import org.eclipse.openvsx.entities.Extension;
+import org.eclipse.openvsx.entities.ExtensionVersion;
+import org.eclipse.openvsx.entities.FileResource;
+import org.eclipse.openvsx.entities.PersonalAccessToken;
+import org.eclipse.openvsx.entities.UserData;
 import org.eclipse.openvsx.publish.PublishExtensionVersionHandler;
 import org.eclipse.openvsx.repositories.RepositoryService;
 import org.eclipse.openvsx.search.SearchUtilService;
 import org.eclipse.openvsx.util.ErrorResultException;
+import org.eclipse.openvsx.util.TimeUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+
+import com.google.common.base.Strings;
 
 @Component
 public class ExtensionService {
@@ -52,22 +58,36 @@ public class ExtensionService {
     @Value("${ovsx.publishing.require-license:false}")
     boolean requireLicense;
 
-    public ExtensionVersion publishVersion(InputStream content, PersonalAccessToken token) {
-        FileResource download;
-        ExtensionVersion extVersion;
-        var extensionFile = createExtensionFile(content);
-        try (var processor = new ExtensionProcessor(extensionFile)) {
-            extVersion = publishHandler.createExtensionVersion(processor, token);
+    @Transactional
+    public ExtensionVersion mirrorVersion(Path extensionFile, PersonalAccessToken token, String binaryName, String timestamp) {
+        var downlaod = doPublish(extensionFile, token, TimeUtil.fromUTCString(timestamp));
+        publishHandler.mirror(downlaod, extensionFile);
+        downlaod.setName(binaryName);
+        return downlaod.getExtension();
+    }
 
-            // Check the extension's license
-            var license = processor.getLicense(extVersion);
-            checkLicense(extVersion, license);
+    public ExtensionVersion publishVersion(InputStream content, PersonalAccessToken token) {
+        // TODO delete extension file after publishing
+        var extensionFile = createExtensionFile(content);
+        var download = doPublish(extensionFile, token, null);
+        publishHandler.publishAsync(download, extensionFile, this);
+        return download.getExtension();
+    }
+
+    private FileResource doPublish(Path extensionFile, PersonalAccessToken token, LocalDateTime mirrorTimestamp) {
+        FileResource download;
+        try (var processor = new ExtensionProcessor(extensionFile)) {
+            var extVersion = publishHandler.createExtensionVersion(processor, token, mirrorTimestamp);
+
+            if (mirrorTimestamp == null) {
+                // Check the extension's license, but skip in mirror mode
+                var license = processor.getLicense(extVersion);
+                checkLicense(extVersion, license);
+            }
 
             download = processor.getBinary(extVersion);
         }
-
-        publishHandler.publishAsync(download, extensionFile, this);
-        return extVersion;
+        return download;
     }
 
     private Path createExtensionFile(InputStream content) {

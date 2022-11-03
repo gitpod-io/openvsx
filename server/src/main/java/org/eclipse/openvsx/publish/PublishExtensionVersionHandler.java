@@ -9,13 +9,24 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.publish;
 
-import com.google.common.base.Joiner;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+import javax.persistence.EntityManager;
+import javax.transaction.Transactional;
+
 import org.eclipse.openvsx.ExtensionProcessor;
 import org.eclipse.openvsx.ExtensionService;
 import org.eclipse.openvsx.ExtensionValidator;
 import org.eclipse.openvsx.UserService;
 import org.eclipse.openvsx.adapter.VSCodeIdService;
-import org.eclipse.openvsx.entities.*;
+import org.eclipse.openvsx.entities.Extension;
+import org.eclipse.openvsx.entities.ExtensionVersion;
+import org.eclipse.openvsx.entities.FileResource;
+import org.eclipse.openvsx.entities.PersonalAccessToken;
+import org.eclipse.openvsx.entities.UserData;
 import org.eclipse.openvsx.repositories.RepositoryService;
 import org.eclipse.openvsx.util.ErrorResultException;
 import org.eclipse.openvsx.util.TargetPlatform;
@@ -25,11 +36,7 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import javax.persistence.EntityManager;
-import javax.transaction.Transactional;
-import java.nio.file.Path;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
+import com.google.common.base.Joiner;
 
 @Component
 public class PublishExtensionVersionHandler {
@@ -53,22 +60,23 @@ public class PublishExtensionVersionHandler {
     ExtensionValidator validator;
 
     @Transactional
-    public ExtensionVersion createExtensionVersion(ExtensionProcessor processor, PersonalAccessToken token) {
+    public ExtensionVersion createExtensionVersion(ExtensionProcessor processor, PersonalAccessToken token, LocalDateTime mirrorTimestamp) {
         // Extract extension metadata from its manifest
-        var extVersion = createExtensionVersion(processor, token.getUser(), token);
-        var dependencies = processor.getExtensionDependencies().stream()
-                .map(this::checkDependency)
-                .collect(Collectors.toList());
-        var bundledExtensions = processor.getBundledExtensions().stream()
-                .map(this::checkBundledExtension)
-                .collect(Collectors.toList());
+        var extVersion = createExtensionVersion(processor, token.getUser(), token, mirrorTimestamp);
+        var dependencies = processor.getExtensionDependencies().stream();
+        var bundledExtensions = processor.getBundledExtensions().stream();
+        if (mirrorTimestamp == null) {
+            // check dependencies, but skip in mirror mode
+            dependencies = dependencies.map(this::checkDependency);
+            bundledExtensions = bundledExtensions.map(this::checkBundledExtension);
+        }
 
-        extVersion.setDependencies(dependencies);
-        extVersion.setBundledExtensions(bundledExtensions);
+        extVersion.setDependencies(dependencies.collect(Collectors.toList()));
+        extVersion.setBundledExtensions(bundledExtensions.collect(Collectors.toList()));
         return extVersion;
     }
 
-    private ExtensionVersion createExtensionVersion(ExtensionProcessor processor, UserData user, PersonalAccessToken token) {
+    private ExtensionVersion createExtensionVersion(ExtensionProcessor processor, UserData user, PersonalAccessToken token, LocalDateTime mirrorTimestamp) {
         var namespaceName = processor.getNamespace();
         var namespace = repositories.findNamespace(namespaceName);
         if (namespace == null) {
@@ -88,7 +96,11 @@ public class PublishExtensionVersionHandler {
         if (extVersion.getDisplayName() != null && extVersion.getDisplayName().trim().isEmpty()) {
             extVersion.setDisplayName(null);
         }
-        extVersion.setTimestamp(TimeUtil.getCurrentUTC());
+        if (mirrorTimestamp != null) {
+            extVersion.setTimestamp(mirrorTimestamp);    
+        } else {
+            extVersion.setTimestamp(TimeUtil.getCurrentUTC());
+        }
         extVersion.setPublishedWith(token);
         extVersion.setActive(false);
 
@@ -99,6 +111,7 @@ public class PublishExtensionVersionHandler {
             extension.setName(extensionName);
             extension.setNamespace(namespace);
             extension.setPublishedDate(extVersion.getTimestamp());
+            extension.setLastUpdatedDate(extVersion.getTimestamp());
 
             var updateExistingPublicIds = vsCodeIdService.setPublicIds(extension);
             if(updateExistingPublicIds) {
@@ -116,8 +129,20 @@ public class PublishExtensionVersionHandler {
                                 + " is already published"
                                 + (existingVersion.isActive() ? "." : ", but is currently inactive and therefore not visible."));
             }
+            if (mirrorTimestamp == null) {
+                extension.setLastUpdatedDate(extVersion.getTimestamp());
+            } else {
+                // published date should point to timestamp of very first extension version
+                if (extVersion.getTimestamp().isBefore(extension.getPublishedDate())) {
+                    extension.setPublishedDate(extVersion.getTimestamp());
+                }
+                // last updated date should point to timestamp of very last extension version
+                if (extension.getLastUpdatedDate().isBefore(extVersion.getTimestamp())) {
+                    extension.setLastUpdatedDate(extVersion.getTimestamp());
+                }
+            }
         }
-        extension.setLastUpdatedDate(extVersion.getTimestamp());
+        
         extension.getVersions().add(extVersion);
         extVersion.setExtension(extension);
 
@@ -178,5 +203,18 @@ public class PublishExtensionVersionHandler {
 
         // Update whether extension is active, the search index and evict cache
         service.activateExtension(extVersion, extensionService);
+    }
+
+    public void mirror(FileResource download, Path extensionFile) {
+        var extVersion = download.getExtension();
+        service.mirrorResource(download);
+        try(var processor = new ExtensionProcessor(extensionFile)) {
+            Consumer<FileResource> consumer = resource -> {
+                service.mirrorResource(resource);
+            };
+
+            processor.getFileResources(extVersion).forEach(consumer);
+            // don't store file resources, they can be generated on the flight to avoid traversing entire zip file
+        }
     }
 }

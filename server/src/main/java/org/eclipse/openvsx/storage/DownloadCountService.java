@@ -16,6 +16,7 @@ import org.eclipse.openvsx.entities.FileResource;
 import org.eclipse.openvsx.search.SearchUtilService;
 import org.eclipse.openvsx.util.TimeUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.persistence.EntityManager;
@@ -33,10 +34,17 @@ public class DownloadCountService {
     @Autowired
     EntityManager entityManager;
 
+    @Value("${ovsx.data.mirror.enabled:false}")
+    boolean readOnly;
+
     /**
      * Register a package file download by increasing its download count.
      */
     public void increaseDownloadCount(FileResource resource) {
+        if(readOnly) {
+            return;
+        }
+        
         var download = new Download();
         download.setAmount(1);
         download.setTimestamp(TimeUtil.getCurrentUTC());

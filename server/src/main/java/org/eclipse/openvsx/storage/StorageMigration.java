@@ -9,8 +9,11 @@
  ********************************************************************************/
 package org.eclipse.openvsx.storage;
 
-import static org.eclipse.openvsx.entities.FileResource.*;
+import static org.eclipse.openvsx.entities.FileResource.STORAGE_AZURE;
+import static org.eclipse.openvsx.entities.FileResource.STORAGE_DB;
+import static org.eclipse.openvsx.entities.FileResource.STORAGE_GOOGLE;
 
+import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledFuture;
 
@@ -51,7 +54,7 @@ public class StorageMigration {
     StorageUtilService storageUtil;
 
     @Autowired
-    RestTemplate restTemplate;
+    RestTemplate backgroundRestTemplate;
 
     @Value("${ovsx.storage.migration-delay:500}")
     long migrationDelay;
@@ -121,7 +124,7 @@ public class StorageMigration {
 
     private byte[] downloadFile(FileResource resource) {
         var location = storageUtil.getLocation(resource);
-        return restTemplate.getForObject(location, byte[].class);
+        return backgroundRestTemplate.getForObject("{migrateUri}", byte[].class, Map.of("migrateUri", location));
     }
 
 }

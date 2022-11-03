@@ -9,6 +9,8 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.migration;
 
+import java.nio.file.Files;
+
 import org.eclipse.openvsx.ExtensionProcessor;
 import org.jobrunr.jobs.annotations.Job;
 import org.jobrunr.jobs.context.JobRunrDashboardLogger;
@@ -35,15 +37,19 @@ public class ExtractResourcesJobRequestHandler implements JobRequestHandler<Extr
         service.deleteResources(extVersion);
         var entry = service.getDownload(extVersion);
         var extensionFile = service.getExtensionFile(entry);
-        var download = entry.getKey();
-        try(var extProcessor = new ExtensionProcessor(extensionFile)) {
-            extProcessor.processEachResource(download.getExtension(), (resource) -> {
-                resource.setStorageType(download.getStorageType());
-                service.uploadResource(resource);
-                service.persistResource(resource);
-            });
-        }
+        try {
+            var download = entry.getKey();
+            try(var extProcessor = new ExtensionProcessor(extensionFile)) {
+                extProcessor.processEachResource(download.getExtension(), (resource) -> {
+                    resource.setStorageType(download.getStorageType());
+                    service.uploadResource(resource);
+                    service.persistResource(resource);
+                });
+            }
 
-        service.deleteWebResources(extVersion);
+            service.deleteWebResources(extVersion);
+        } finally {
+            Files.delete(extensionFile);
+        }
     }
 }

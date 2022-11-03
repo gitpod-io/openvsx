@@ -9,15 +9,14 @@
  ********************************************************************************/
 package org.eclipse.openvsx.repositories;
 
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.Repository;
-import org.springframework.data.util.Streamable;
+import java.util.Collection;
+import java.util.List;
 
 import org.eclipse.openvsx.entities.Extension;
 import org.eclipse.openvsx.entities.Namespace;
-
-import java.time.LocalDateTime;
-import java.util.Collection;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.Repository;
+import org.springframework.data.util.Streamable;
 
 public interface ExtensionRepository extends Repository<Extension, Long> {
 
@@ -43,4 +42,7 @@ public interface ExtensionRepository extends Repository<Extension, Long> {
 
     @Query("select max(e.downloadCount) from Extension e")
     int getMaxDownloadCount();
+
+    @Query("select e from Extension e where concat(e.namespace.name, '.', e.name) not in(?1)")
+    Streamable<Extension> findAllNotMatchingByExtensionId(List<String> extensionIds);
 }

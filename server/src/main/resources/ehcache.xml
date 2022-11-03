@@ -4,7 +4,7 @@
     <persistence directory="${java.io.tmpdir}"/>
     <cache alias="database.search">
         <expiry>
-            <ttl unit="seconds">3600</ttl>
+            <ttl unit="seconds">600</ttl>
         </expiry>
         <resources>
             <heap unit="entries">1024</heap>
@@ -14,7 +14,7 @@
     </cache>
     <cache alias="extension.json">
         <expiry>
-            <ttl unit="seconds">3600</ttl>
+            <ttl unit="seconds">600</ttl>
         </expiry>
         <resources>
             <heap unit="entries">1024</heap>
@@ -24,7 +24,7 @@
     </cache>
     <cache alias="latest.extension.version">
         <expiry>
-            <ttl unit="seconds">3600</ttl>
+            <ttl unit="seconds">600</ttl>
         </expiry>
         <resources>
             <heap unit="entries">1024</heap>
@@ -34,7 +34,7 @@
     </cache>
     <cache alias="latest.extension.version.dto">
         <expiry>
-            <ttl unit="seconds">3600</ttl>
+            <ttl unit="seconds">600</ttl>
         </expiry>
         <resources>
             <heap unit="entries">1024</heap>
@@ -44,7 +44,7 @@
     </cache>
     <cache alias="buckets">
         <expiry>
-            <ttl unit="seconds">3600</ttl>
+            <ttl unit="seconds">600</ttl>
         </expiry>
         <resources>
             <heap unit="entries">1024</heap>

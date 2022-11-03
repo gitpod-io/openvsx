@@ -11,21 +11,19 @@ package org.eclipse.openvsx;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
-
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.MissingNode;
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 
 import org.eclipse.openvsx.entities.ExtensionVersion;
 import org.eclipse.openvsx.entities.FileResource;
@@ -37,6 +35,12 @@ import org.elasticsearch.common.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.util.Pair;
+
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.MissingNode;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 
 /**
  * Processes uploaded extension files and extracts their metadata.
@@ -320,17 +324,17 @@ public class ExtensionProcessor implements AutoCloseable {
     public FileResource getBinary(ExtensionVersion extVersion) {
         var binary = new FileResource();
         binary.setExtension(extVersion);
-        binary.setName(getBinaryName());
+        binary.setName(getBinaryName(extVersion));
         binary.setType(FileResource.DOWNLOAD);
         binary.setContent(null);
         return binary;
     }
 
-    private String getBinaryName() {
-        loadVsixManifest();
-        var resourceName = getNamespace() + "." + getExtensionName() + "-" + getVersion();
-        if(!TargetPlatform.isUniversal(getTargetPlatform())) {
-            resourceName += "@" + getTargetPlatform();
+    private String getBinaryName(ExtensionVersion extVersion) {
+        var ext = extVersion.getExtension();
+        var resourceName = ext.getNamespace().getName() + "." + ext.getName() + "-" + extVersion.getVersion();
+        if(!TargetPlatform.isUniversal(extVersion.getTargetPlatform())) {
+            resourceName += "@" + extVersion.getTargetPlatform();
         }
 
         resourceName += ".vsix";

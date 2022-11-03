@@ -9,6 +9,15 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.migration;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.AbstractMap;
+import java.util.Map;
+
+import javax.persistence.EntityManager;
+import javax.transaction.Transactional;
+
 import org.eclipse.openvsx.entities.ExtensionVersion;
 import org.eclipse.openvsx.entities.ExtractResourcesMigrationItem;
 import org.eclipse.openvsx.entities.FileResource;
@@ -22,14 +31,6 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
-import javax.persistence.EntityManager;
-import javax.transaction.Transactional;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.AbstractMap;
-import java.util.Map;
-
 @Component
 public class ExtractResourcesJobService {
 
@@ -37,7 +38,7 @@ public class ExtractResourcesJobService {
     RepositoryService repositories;
 
     @Autowired
-    RestTemplate restTemplate;
+    RestTemplate backgroundRestTemplate;
 
     @Autowired
     EntityManager entityManager;
@@ -89,13 +90,13 @@ public class ExtractResourcesJobService {
             var download = entry.getKey();
             var storage = getStorage(download);
             var uri = storage.getLocation(download);
-            restTemplate.execute(uri, HttpMethod.GET, null, response -> {
+            backgroundRestTemplate.execute("{extractResourceUri}", HttpMethod.GET, null, response -> {
                 try(var out = Files.newOutputStream(extensionFile)) {
                     response.getBody().transferTo(out);
                 }
 
                 return extensionFile;
-            });
+            }, uri);
         } else {
             try {
                 Files.write(extensionFile, content);
