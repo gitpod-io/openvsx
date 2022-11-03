@@ -48,6 +48,9 @@ public class DataMirrorJobRequestHandler implements JobRequestHandler<DataMirror
     @Value("${ovsx.data.mirror.schedule:}")
     String schedule;
 
+    @Value("${ovsx.data.mirror.user-name:}")
+    String userName;
+
     @Autowired
     RepositoryService repositories;
 

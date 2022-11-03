@@ -20,7 +20,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.eclipse.openvsx.ExtensionService;
-import org.eclipse.openvsx.IExtensionRegistry;
 import org.eclipse.openvsx.UpstreamRegistryService;
 import org.eclipse.openvsx.UserService;
 import org.eclipse.openvsx.entities.UserData;
@@ -89,7 +88,6 @@ public class MirrorExtensionService {
         if (lastModified == null) {
             return true;
         }
-
         var extension = repositories.findExtension(extensionName, namespaceName);
         if (extension == null) {
             return true;

@@ -3,7 +3,7 @@ server:
 
 spring:
   profiles:
-    include: ovsx
+    include: ovsx,mirror
   cache:
     jcache:
       config: classpath:ehcache.xml
@@ -76,9 +76,9 @@ org:
       enabled: true
     background-job-server:
       enabled: true
-      worker-count: 2
+      worker-count: 20
     dashboard:
-      enabled: false
+      enabled: true
     database:
       type: sql
     miscellaneous:
@@ -122,6 +122,15 @@ bucket4j:
               unit: seconds
 
 ovsx:
+  storage:
+    primary-service: azure-blob
+    azure:
+      service-endpoint: https://openvsxorg.blob.core.windows.net/
+      blob-container: resources
+  webui:
+    url: https://open-vsx.org
+  upstream:
+    url: https://open-vsx.org
   databasesearch:
     enabled: false
   elasticsearch:
@@ -130,3 +139,6 @@ ovsx:
     base-url: https://api.eclipse.org
     publisher-agreement:
       timezone: US/Eastern
+
+configcat:
+  base-url: "https://gitpod-staging.com/configcat"

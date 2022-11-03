@@ -9,13 +9,21 @@
  ********************************************************************************/
 package org.eclipse.openvsx;
 
-import com.google.common.base.Strings;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-import org.eclipse.openvsx.json.*;
+import org.eclipse.openvsx.json.ExtensionJson;
+import org.eclipse.openvsx.json.NamespaceDetailsJson;
+import org.eclipse.openvsx.json.NamespaceJson;
+import org.eclipse.openvsx.json.QueryParamJson;
+import org.eclipse.openvsx.json.QueryParamJsonV2;
+import org.eclipse.openvsx.json.QueryResultJson;
+import org.eclipse.openvsx.json.ReviewListJson;
+import org.eclipse.openvsx.json.SearchResultJson;
 import org.eclipse.openvsx.search.ISearchService;
 import org.eclipse.openvsx.util.NotFoundException;
 import org.eclipse.openvsx.util.TargetPlatform;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,12 +34,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
+import com.google.common.base.Strings;
 
 @Component
 public class UpstreamRegistryService implements IExtensionRegistry {
@@ -39,7 +45,7 @@ public class UpstreamRegistryService implements IExtensionRegistry {
     protected final Logger logger = LoggerFactory.getLogger(UpstreamRegistryService.class);
 
     @Autowired
-    RestTemplate restTemplate;
+    private RestTemplate restTemplate;
 
     @Autowired
     UrlConfigService urlConfigService;
@@ -147,9 +153,12 @@ public class UpstreamRegistryService implements IExtensionRegistry {
             urlTemplate += "/{targetPlatform}";
             uriVariables.put("targetPlatform", targetPlatform);
         }
+        if(version != null) {
+            urlTemplate += "/{version}";
+            uriVariables.put("version", version);
+        }
 
-        urlTemplate += "/{version}/file/{fileName}";
-        uriVariables.put("version", version);
+        urlTemplate += "/file/{fileName}";
         uriVariables.put("fileName", fileName);
         return getFile(urlTemplate, uriVariables);
     }
@@ -163,7 +172,6 @@ public class UpstreamRegistryService implements IExtensionRegistry {
                 var url = UriComponentsBuilder.fromUriString(urlTemplate).build(uriVariables);
                 logger.error("HEAD " + url, exc);
             }
-
             throw new NotFoundException();
         }
         var statusCode = response.getStatusCode();
@@ -196,7 +204,6 @@ public class UpstreamRegistryService implements IExtensionRegistry {
                 var url = UriComponentsBuilder.fromUriString(urlTemplate).build(uriVariables);
                 logger.error("GET " + url, exc);
             }
-
             throw new NotFoundException();
         }
     }

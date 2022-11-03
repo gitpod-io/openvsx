@@ -9,6 +9,16 @@
  ********************************************************************************/
 package org.eclipse.openvsx.storage;
 
+import static org.eclipse.openvsx.entities.FileResource.STORAGE_AZURE;
+import static org.eclipse.openvsx.entities.FileResource.STORAGE_DB;
+import static org.eclipse.openvsx.entities.FileResource.STORAGE_GOOGLE;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ScheduledFuture;
+
+import javax.persistence.EntityManager;
+
 import org.apache.jena.ext.com.google.common.collect.Lists;
 import org.eclipse.openvsx.entities.FileResource;
 import org.eclipse.openvsx.repositories.RepositoryService;
@@ -23,13 +33,6 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestTemplate;
-
-import javax.persistence.EntityManager;
-import java.util.Map;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ScheduledFuture;
-
-import static org.eclipse.openvsx.entities.FileResource.*;
 
 @Component
 @ConditionalOnProperty(value = "ovsx.data.mirror.enabled", havingValue = "false", matchIfMissing = true)

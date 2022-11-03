@@ -1,0 +1,53 @@
+name: Publish OpenVSX mirror to Docker
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+env:
+  SERVER_TAG: eu.gcr.io/gitpod-core-dev/build/openvsx
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up JDK
+      uses: actions/setup-java@v1
+      with:
+        java-version: 11
+    - uses: actions/checkout@v2
+    - name: Auth Google Cloud SDK
+      uses: google-github-actions/auth@v0
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v0
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+    - name: Set Image Version
+      run: echo "IMAGE_VERSION=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
+    - name: Run Server Tests
+      run: server/gradlew --no-daemon -p server check
+    - name: Build Server Image
+      run: docker build -t $SERVER_TAG:$IMAGE_VERSION server
+    - name: Push Docker Images
+      run: |
+        gcloud auth configure-docker --quiet
+        docker push $SERVER_TAG:$IMAGE_VERSION
+      if: github.repository == 'gitpod-io/openvsx'
+
+    - name: Get previous job's status
+      id: lastrun
+      uses: filiptronicek/get-last-job-status@main
+
+    - name: Slack Notification
+      if: ${{ (success() && steps.lastrun.outputs.status == 'failed') || failure() }}
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        SLACK_COLOR: ${{ job.status }}

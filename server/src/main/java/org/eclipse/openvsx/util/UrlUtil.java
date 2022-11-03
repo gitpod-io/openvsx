@@ -11,16 +11,17 @@ package org.eclipse.openvsx.util;
 
 import java.nio.charset.StandardCharsets;
 
+import javax.servlet.http.HttpServletRequest;
+
 import org.apache.commons.lang3.ArrayUtils;
 import org.eclipse.openvsx.entities.ExtensionVersion;
 import org.eclipse.openvsx.json.ExtensionJson;
+import org.springframework.http.HttpHeaders;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.util.UriUtils;
-
-import javax.servlet.http.HttpServletRequest;
 
 public final class UrlUtil {
 
@@ -132,6 +133,24 @@ public final class UrlUtil {
             }
         }
         return result.toString();
+    }
+
+    public static HttpHeaders getForwardedHeaders() {
+        var headers = new  HttpHeaders();
+        try {
+            var requestAttrs = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
+            var request = requestAttrs.getRequest();
+
+            var it = request.getHeaderNames();
+            while (it.hasMoreElements()) {
+                var header = it.nextElement();
+                headers.add(header, request.getHeader(header));
+            }
+
+        } catch (IllegalStateException e) {
+        }
+        headers.remove(HttpHeaders.HOST);
+        return headers;
     }
 
     /**

@@ -26,7 +26,8 @@ public class ScheduleDataMirrorJobs {
 
     @EventListener
     public void scheduleJobs(ApplicationStartedEvent event) {
-        if (data != null) {
+        if(data != null) {
+            data.createMirrorUser();
             scheduler.scheduleRecurrently("DataMirror", data.getSchedule(), new DataMirrorJobRequest());
         } else {
             scheduler.delete("DataMirror");

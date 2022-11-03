@@ -1,0 +1,34 @@
+name: Sync OpenVSX mirror with upstream
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 23 * * 1-5"
+
+jobs:
+  sync-master:
+    name: Syncing open-vsx
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Sync upstream changes
+        id: sync
+        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4
+        with:
+          target_sync_branch: master
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
+          upstream_sync_branch: master
+          upstream_sync_repo: eclipse/openvsx
+          git_config_pull_rebase: true
+          target_branch_push_args: '--force-with-lease'
+
+      - name: Get previous job's status
+        id: lastrun
+        uses: filiptronicek/get-last-job-status@main
+
+      - name: Slack Notification
+        if: ${{ (success() && steps.lastrun.outputs.status == 'failed') || failure() }}
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_COLOR: ${{ job.status }}

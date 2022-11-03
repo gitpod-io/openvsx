@@ -13,11 +13,12 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
-
-import com.google.common.base.Strings;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tika.Tika;
@@ -29,6 +30,8 @@ import org.eclipse.openvsx.json.NamespaceDetailsJson;
 import org.eclipse.openvsx.util.TargetPlatform;
 import org.eclipse.openvsx.util.VersionAlias;
 import org.springframework.stereotype.Component;
+
+import com.google.common.base.Strings;
 
 @Component
 public class ExtensionValidator {

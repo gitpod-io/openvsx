@@ -9,8 +9,24 @@
  ********************************************************************************/
 package org.eclipse.openvsx.storage;
 
-import com.google.common.base.Strings;
-import com.google.common.collect.Maps;
+import static org.eclipse.openvsx.entities.FileResource.STORAGE_AZURE;
+import static org.eclipse.openvsx.entities.FileResource.STORAGE_DB;
+import static org.eclipse.openvsx.entities.FileResource.STORAGE_GOOGLE;
+
+import java.net.URI;
+import java.nio.file.Path;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+import javax.persistence.EntityManager;
+import javax.transaction.Transactional;
+
 import org.eclipse.openvsx.cache.CacheService;
 import org.eclipse.openvsx.entities.Download;
 import org.eclipse.openvsx.entities.ExtensionVersion;
@@ -28,15 +44,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
-import javax.persistence.EntityManager;
-import javax.transaction.Transactional;
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import static org.eclipse.openvsx.entities.FileResource.*;
+import com.google.common.base.Strings;
+import com.google.common.collect.Maps;
 
 /**
  * Provides utility around storing file resources and acts as a composite storage
@@ -65,6 +74,9 @@ public class StorageUtilService implements IStorageService {
 
     @Autowired
     EntityManager entityManager;
+
+    @Value("${ovsx.data.mirror.enabled:false}")
+    boolean readOnly;
 
     /** Determines which external storage service to use in case multiple services are configured. */
     @Value("${ovsx.storage.primary-service:}")
@@ -119,6 +131,10 @@ public class StorageUtilService implements IStorageService {
 
     @Override
     public void uploadFile(FileResource resource) {
+        if(readOnly) {
+            return;
+        }
+        
         var storageType = getActiveStorageType();
         switch (storageType) {
             case STORAGE_GOOGLE:
@@ -136,6 +152,10 @@ public class StorageUtilService implements IStorageService {
 
     @Override
     public void uploadFile(FileResource resource, Path filePath) {
+        if(readOnly) {
+            return;
+        }
+        
         var storageType = getActiveStorageType();
         switch (storageType) {
             case STORAGE_GOOGLE:
@@ -171,6 +191,10 @@ public class StorageUtilService implements IStorageService {
 
     @Override
     public void removeFile(FileResource resource) {
+        if(readOnly) {
+            return;
+        }
+
         switch (resource.getStorageType()) {
             case STORAGE_GOOGLE:
                 googleStorage.removeFile(resource);
@@ -249,7 +273,7 @@ public class StorageUtilService implements IStorageService {
 
     @Transactional(Transactional.TxType.MANDATORY)
     public void increaseDownloadCount(FileResource resource) {
-        if(azureDownloadCountService.isEnabled()) {
+        if(readOnly || azureDownloadCountService.isEnabled()) {
             // don't count downloads twice
             return;
         }

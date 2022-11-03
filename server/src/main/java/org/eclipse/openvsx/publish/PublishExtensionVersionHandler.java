@@ -9,13 +9,26 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.publish;
 
-import com.google.common.base.Joiner;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+import javax.persistence.EntityManager;
+import javax.transaction.Transactional;
+
 import org.eclipse.openvsx.ExtensionProcessor;
 import org.eclipse.openvsx.ExtensionService;
 import org.eclipse.openvsx.ExtensionValidator;
 import org.eclipse.openvsx.UserService;
 import org.eclipse.openvsx.adapter.VSCodeIdService;
-import org.eclipse.openvsx.entities.*;
+import org.eclipse.openvsx.entities.Extension;
+import org.eclipse.openvsx.entities.ExtensionVersion;
+import org.eclipse.openvsx.entities.FileResource;
+import org.eclipse.openvsx.entities.PersonalAccessToken;
+import org.eclipse.openvsx.entities.UserData;
 import org.eclipse.openvsx.repositories.RepositoryService;
 import org.eclipse.openvsx.util.ErrorResultException;
 import org.eclipse.openvsx.util.TargetPlatform;
@@ -26,14 +39,7 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import javax.persistence.EntityManager;
-import javax.transaction.Transactional;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.LocalDateTime;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
+import com.google.common.base.Joiner;
 
 @Component
 public class PublishExtensionVersionHandler {
@@ -73,8 +79,8 @@ public class PublishExtensionVersionHandler {
                     .collect(Collectors.toList());
         }
 
-        extVersion.setDependencies(dependencies);
-        extVersion.setBundledExtensions(bundledExtensions);
+        extVersion.setDependencies(dependencies.collect(Collectors.toList()));
+        extVersion.setBundledExtensions(bundledExtensions.collect(Collectors.toList()));
         return extVersion;
     }
 
@@ -109,6 +115,7 @@ public class PublishExtensionVersionHandler {
             extension.setName(extensionName);
             extension.setNamespace(namespace);
             extension.setPublishedDate(extVersion.getTimestamp());
+            extension.setLastUpdatedDate(extVersion.getTimestamp());
 
             var updateExistingPublicIds = vsCodeIdService.setPublicIds(extension);
             if(updateExistingPublicIds) {
@@ -125,6 +132,18 @@ public class PublishExtensionVersionHandler {
                                 + (TargetPlatform.isUniversal(extVersion) ? "" : " (" + extVersion.getTargetPlatform() + ")")
                                 + " is already published"
                                 + (existingVersion.isActive() ? "." : ", but is currently inactive and therefore not visible."));
+            }
+            if (timestamp == null) {
+                extension.setLastUpdatedDate(extVersion.getTimestamp());
+            } else {
+                // published date should point to timestamp of very first extension version
+                if (extVersion.getTimestamp().isBefore(extension.getPublishedDate())) {
+                    extension.setPublishedDate(extVersion.getTimestamp());
+                }
+                // last updated date should point to timestamp of very last extension version
+                if (extension.getLastUpdatedDate().isBefore(extVersion.getTimestamp())) {
+                    extension.setLastUpdatedDate(extVersion.getTimestamp());
+                }
             }
         }
 

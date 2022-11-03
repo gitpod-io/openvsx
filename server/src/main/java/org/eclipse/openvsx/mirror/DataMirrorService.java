@@ -19,7 +19,12 @@ import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 
-import org.eclipse.openvsx.*;
+import org.eclipse.openvsx.AdminService;
+import org.eclipse.openvsx.ExtensionService;
+import org.eclipse.openvsx.IExtensionRegistry;
+import org.eclipse.openvsx.LocalRegistryService;
+import org.eclipse.openvsx.UpstreamRegistryService;
+import org.eclipse.openvsx.UserService;
 import org.eclipse.openvsx.entities.Extension;
 import org.eclipse.openvsx.entities.ExtensionReview;
 import org.eclipse.openvsx.entities.ExtensionVersion;
@@ -46,7 +51,6 @@ import org.springframework.web.client.RestTemplate;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-
 
 @Component
 @ConditionalOnProperty(value = "ovsx.data.mirror.enabled", havingValue = "true")
@@ -113,13 +117,21 @@ public class DataMirrorService {
         return schedule;
     }
 
+    public String getUserName() {
+        return schedule;
+    }
+
+    public IExtensionRegistry getMirror() {
+        return upstream;
+    }
+
     public boolean needsMatch() {
         return !excludeExtensions.isEmpty() || !includeExtensions.isEmpty();
     }
     
     public boolean match(String namespaceName, String extensionName) {
-        if (!excludeExtensions.isEmpty() &&
-            (excludeExtensions.contains(namespaceName + ".*") ||
+        if (!excludeExtensions.isEmpty() && 
+            (excludeExtensions.contains(namespaceName + ".*") || 
             excludeExtensions.contains(namespaceName + "." + extensionName))) {
             return false;
         }

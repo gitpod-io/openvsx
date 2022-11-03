@@ -9,19 +9,19 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx.migration;
 
+import javax.transaction.Transactional;
+
 import org.eclipse.openvsx.entities.ExtensionVersion;
 import org.eclipse.openvsx.repositories.RepositoryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import javax.transaction.Transactional;
 
 @Component
 public class ExtractResourcesJobService {
 
     @Autowired
     RepositoryService repositories;
-
+    
     @Transactional
     public void deleteResources(ExtensionVersion extVersion) {
         repositories.deleteFileResources(extVersion, "resource");

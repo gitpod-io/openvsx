@@ -10,8 +10,12 @@ ovsx:
       read-only:
         disallowed-methods: POST, PUT, PATCH, DELETE
         allowed-endpoints: /vscode/gallery/extensionquery, /admin/update-search-index, /api/-/query
-      exclude-extensions:
+      excluded-extensions:
         - vscode.*
+        - redhat.vscode-yaml
+      include-extensions:
+        - GitHub.vscode-pull-request-github
+        - arm.keil-studio-pack-web
   storage:
     primary-service: azure-blob
     azure:

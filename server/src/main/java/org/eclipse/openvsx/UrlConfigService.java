@@ -9,12 +9,11 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx;
 
+import org.eclipse.openvsx.util.ConfigCat;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-/**
- * A single point of configuration of URLs to upstream.
- */
 @Component
 public class UrlConfigService {
 
@@ -24,19 +23,28 @@ public class UrlConfigService {
     @Value("${ovsx.vscode.upstream.gallery-url:}")
     String upstreamGalleryUrl;
 
-    @Value("${ovsx.data.mirror.server-url:}")
-    String mirrorServerUrl;
-
-    public String getUpstreamUrl() {
-        return upstreamUrl;
-    }
-
     public String  getUpstreamGalleryUrl() {
         return upstreamGalleryUrl;
     }
 
+    @Value("${ovsx.data.mirror.server-url:}")
+    String mirrorServerUrl;
+
+    @Autowired(required = false)
+    ConfigCat configCat;
+
+    public String getUpstreamUrl() {
+        if (configCat == null) {
+            return upstreamUrl;
+        }
+        return configCat.getUpstreamURL(upstreamUrl);
+    }
+
     public String getMirrorServerUrl() {
-        return mirrorServerUrl;
+        if (configCat == null) {
+            return mirrorServerUrl;
+        }
+        return configCat.getUpstreamURL(mirrorServerUrl);
     }
 
 }

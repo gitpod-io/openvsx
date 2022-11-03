@@ -9,6 +9,9 @@
  ********************************************************************************/
 package org.eclipse.openvsx;
 
+import static org.eclipse.openvsx.cache.CacheService.CACHE_NAMESPACE_DETAILS_JSON;
+import static org.eclipse.openvsx.util.UrlUtil.createApiUrl;
+
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.UUID;
@@ -16,11 +19,14 @@ import java.util.UUID;
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 
-import com.google.common.base.Joiner;
 import org.eclipse.openvsx.cache.CacheService;
-import org.eclipse.openvsx.entities.*;
-import org.eclipse.openvsx.json.NamespaceDetailsJson;
+import org.eclipse.openvsx.entities.FileResource;
+import org.eclipse.openvsx.entities.Namespace;
+import org.eclipse.openvsx.entities.NamespaceMembership;
+import org.eclipse.openvsx.entities.PersonalAccessToken;
+import org.eclipse.openvsx.entities.UserData;
 import org.eclipse.openvsx.json.AccessTokenJson;
+import org.eclipse.openvsx.json.NamespaceDetailsJson;
 import org.eclipse.openvsx.json.ResultJson;
 import org.eclipse.openvsx.repositories.RepositoryService;
 import org.eclipse.openvsx.security.IdPrincipal;
@@ -35,8 +41,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Component;
 
-import static org.eclipse.openvsx.cache.CacheService.CACHE_NAMESPACE_DETAILS_JSON;
-import static org.eclipse.openvsx.util.UrlUtil.createApiUrl;
+import com.google.common.base.Joiner;
 
 @Component
 public class UserService {
