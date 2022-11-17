@@ -11,6 +11,7 @@ package org.eclipse.openvsx.search;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -233,6 +234,12 @@ public class ElasticSearchServiceTest {
                 return index.deleted = true;
             });
         Mockito.when(indexOps.create())
+            .then(invocation -> {
+                if (exists && !index.deleted)
+                    throw new IllegalStateException("Index already exists.");
+                return index.created = true;
+            });
+        Mockito.when(indexOps.create(anyMap()))
             .then(invocation -> {
                 if (exists && !index.deleted)
                     throw new IllegalStateException("Index already exists.");
