@@ -11,6 +11,7 @@ package org.eclipse.openvsx.search;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -134,6 +135,8 @@ public class ElasticSearchService implements ISearchService {
     @Retryable(DataAccessResourceFailureException.class)
     public void updateSearchIndex(boolean clear) {
         var locked = false;
+        var options = new HashMap<String, Object>();
+        options.put("index.number_of_replicas", "0");
         try {
             var indexOps = searchOperations.indexOps(ExtensionSearch.class);
             if (clear) {
@@ -143,12 +146,12 @@ public class ElasticSearchService implements ISearchService {
                 if (indexOps.exists()) {
                     indexOps.delete();
                 }
-                indexOps.create();
+                indexOps.create(options);
             } else if (!indexOps.exists()) {
                 // Soft mode: the index is created only when it does not exist yet
                 rwLock.writeLock().lock();
                 locked = true;
-                indexOps.create();
+                indexOps.create(options);
             }
             
             // Scan all extensions and create index queries
