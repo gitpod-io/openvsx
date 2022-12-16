@@ -65,4 +65,10 @@ public class RateLimitedRegistryService implements IExtensionRegistry {
         rateLimiter.acquire();
         return registry.query(param);
     }
+
+    @Override
+    public QueryResultJson queryV2(QueryParamJsonV2 param) {
+        rateLimiter.acquire();
+        return registry.queryV2(param);
+    }
 }
