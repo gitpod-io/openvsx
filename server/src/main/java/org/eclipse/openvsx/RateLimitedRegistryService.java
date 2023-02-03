@@ -9,10 +9,18 @@
  * ****************************************************************************** */
 package org.eclipse.openvsx;
 
-import com.google.common.util.concurrent.RateLimiter;
-import org.eclipse.openvsx.json.*;
+import org.eclipse.openvsx.json.ExtensionJson;
+import org.eclipse.openvsx.json.NamespaceDetailsJson;
+import org.eclipse.openvsx.json.NamespaceJson;
+import org.eclipse.openvsx.json.QueryParamJson;
+import org.eclipse.openvsx.json.QueryParamJsonV2;
+import org.eclipse.openvsx.json.QueryResultJson;
+import org.eclipse.openvsx.json.ReviewListJson;
+import org.eclipse.openvsx.json.SearchResultJson;
 import org.eclipse.openvsx.search.ISearchService;
 import org.springframework.http.ResponseEntity;
+
+import com.google.common.util.concurrent.RateLimiter;
 
 public class RateLimitedRegistryService implements IExtensionRegistry {
 
@@ -64,5 +72,23 @@ public class RateLimitedRegistryService implements IExtensionRegistry {
     public QueryResultJson query(QueryParamJson param) {
         rateLimiter.acquire();
         return registry.query(param);
+    }
+
+    @Override
+    public QueryResultJson queryV2(QueryParamJsonV2 param) {
+        rateLimiter.acquire();
+        return registry.queryV2(param);
+    }
+
+    @Override
+    public NamespaceDetailsJson getNamespaceDetails(String namespace) {
+        rateLimiter.acquire();
+        return registry.getNamespaceDetails(namespace);
+    }
+
+    @Override
+    public ResponseEntity<byte[]> getNamespaceLogo(String namespaceName, String fileName) {
+        rateLimiter.acquire();
+        return registry.getNamespaceLogo(namespaceName, fileName);
     }
 }

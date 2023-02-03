@@ -15,6 +15,7 @@ import static org.eclipse.openvsx.entities.FileResource.ICON;
 import static org.eclipse.openvsx.entities.FileResource.LICENSE;
 import static org.eclipse.openvsx.entities.FileResource.MANIFEST;
 import static org.eclipse.openvsx.entities.FileResource.README;
+import static org.eclipse.openvsx.entities.FileResource.VSIXMANIFEST;
 import static org.eclipse.openvsx.util.UrlUtil.createApiUrl;
 
 import java.util.LinkedHashMap;

@@ -17,6 +17,7 @@ import static org.eclipse.openvsx.entities.FileResource.MANIFEST;
 import static org.eclipse.openvsx.entities.FileResource.README;
 import static org.eclipse.openvsx.entities.FileResource.RESOURCE;
 import static org.eclipse.openvsx.entities.FileResource.STORAGE_DB;
+import static org.eclipse.openvsx.entities.FileResource.VSIXMANIFEST;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -43,7 +44,6 @@ import javax.persistence.EntityManager;
 
 import org.eclipse.openvsx.ExtensionValidator;
 import org.eclipse.openvsx.MockTransactionTemplate;
-import org.eclipse.openvsx.UrlConfigService;
 import org.eclipse.openvsx.UserService;
 import org.eclipse.openvsx.cache.CacheService;
 import org.eclipse.openvsx.cache.LatestExtensionVersionCacheKeyGenerator;
@@ -87,7 +87,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.io.CharStreams;
 
-import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 @WebMvcTest(VSCodeAPI.class)

@@ -79,8 +79,8 @@ public class PublishExtensionVersionHandler {
                     .collect(Collectors.toList());
         }
 
-        extVersion.setDependencies(dependencies.collect(Collectors.toList()));
-        extVersion.setBundledExtensions(bundledExtensions.collect(Collectors.toList()));
+        extVersion.setDependencies(dependencies);
+        extVersion.setBundledExtensions(bundledExtensions);
         return extVersion;
     }
 

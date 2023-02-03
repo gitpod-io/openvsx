@@ -10,7 +10,7 @@ ovsx:
       read-only:
         disallowed-methods: POST, PUT, PATCH, DELETE
         allowed-endpoints: /vscode/gallery/extensionquery, /admin/update-search-index, /api/-/query
-      excluded-extensions:
+      exclude-extensions:
         - vscode.*
         - redhat.vscode-yaml
       include-extensions:
