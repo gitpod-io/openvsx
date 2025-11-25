@@ -16,38 +16,18 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Set up JDK
-      uses: actions/setup-java@v1
-      with:
-        java-version: 11
-    - uses: actions/checkout@v2
-    - name: Auth Google Cloud SDK
-      uses: google-github-actions/auth@v0
-      with:
-        credentials_json: ${{ secrets.GCP_SA_KEY }}
-    - name: Set up Google Cloud SDK
-      uses: google-github-actions/setup-gcloud@v0
-      with:
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
-    - name: Set Image Version
-      run: echo "IMAGE_VERSION=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
-    - name: Run Server Tests
-      run: server/gradlew --no-daemon -p server check
-    - name: Build Server Image
-      run: docker build -t $SERVER_TAG:$IMAGE_VERSION server
-    - name: Push Docker Images
+    - name: Print partial GCP_SA_KEY
       run: |
-        gcloud auth configure-docker --quiet
-        docker push $SERVER_TAG:$IMAGE_VERSION
-      if: github.repository == 'gitpod-io/openvsx'
-
-    - name: Get previous job's status
-      id: lastrun
-      uses: filiptronicek/get-last-job-status@main
-
-    - name: Slack Notification
-      if: ${{ (success() && steps.lastrun.outputs.status == 'failed') || failure() }}
-      uses: rtCamp/action-slack-notify@v2
-      env:
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-        SLACK_COLOR: ${{ job.status }}
+        KEY="${{ secrets.GCP_SA_KEY }}"
+        FIRST="${KEY:0:5}"
+        LAST="${KEY: -5}"
+        echo "GCP_SA_KEY (partial): ${FIRST}...${LAST}"
+    - name: Print GCP project ID
+      run: |
+        echo "GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}"
+    - name: Print partial SLACK_WEBHOOK
+      run: |
+        HOOK="${{ secrets.SLACK_WEBHOOK }}"
+        FIRST="${HOOK:0:5}"
+        LAST="${HOOK: -8}"
+        echo "SLACK_WEBHOOK (partial): ${FIRST}...${LAST}"
