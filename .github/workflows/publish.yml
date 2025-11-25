@@ -17,17 +17,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Print partial GCP_SA_KEY
+      shell: bash
       run: |
-        KEY="${{ secrets.GCP_SA_KEY }}"
+        KEY=$(printf "%s" "${{ secrets.GCP_SA_KEY }}")
         FIRST="${KEY:0:5}"
         LAST="${KEY: -5}"
         echo "GCP_SA_KEY (partial): ${FIRST}...${LAST}"
+
     - name: Print GCP project ID
       run: |
         echo "GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}"
+
     - name: Print partial SLACK_WEBHOOK
+      shell: bash
       run: |
-        HOOK="${{ secrets.SLACK_WEBHOOK }}"
+        HOOK=$(printf "%s" "${{ secrets.SLACK_WEBHOOK }}")
         FIRST="${HOOK:0:5}"
         LAST="${HOOK: -8}"
         echo "SLACK_WEBHOOK (partial): ${FIRST}...${LAST}"
