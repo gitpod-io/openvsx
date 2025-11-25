@@ -16,30 +16,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Print partial GCP_SA_KEY
-      shell: bash
-      env:
-        GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
-      run: |
-        # flatten to one line so slicing is predictable
-        CLEAN=$(printf '%s' "$GCP_SA_KEY" | tr -d '\n')
-        FIRST="${CLEAN:0:5}"
-        LAST="${CLEAN: -5}"
-        echo "GCP_SA_KEY (partial): ${FIRST}...${LAST}"
+    - name: Make it failed
+      run: exit 1
 
-    - name: Print GCP project ID
-      shell: bash
-      env:
-        GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-      run: |
-        echo "GCP_PROJECT_ID=$GCP_PROJECT_ID"
+    - name: Get previous job's status
+      id: lastrun
+      uses: filiptronicek/get-last-job-status@main
 
-    - name: Print partial SLACK_WEBHOOK
-      shell: bash
+    - name: Slack Notification
+      uses: rtCamp/action-slack-notify@v2
       env:
         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-      run: |
-        HOOK="$SLACK_WEBHOOK"
-        FIRST="${HOOK:0:5}"
-        LAST="${HOOK: -8}"
-        echo "SLACK_WEBHOOK (partial): ${FIRST}...${LAST}"
+        SLACK_COLOR: ${{ job.status }}
